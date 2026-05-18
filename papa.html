@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Control - Papá</title>
+    <link rel="stylesheet" href="css/estilos.css">
+    <style>
+        .tabs-navegacion { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
+        .tab-btn { padding: 10px 20px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+        .tab-btn.active { background: #3498db; color: white; }
+        .seccion-panel { display: none; }
+        .seccion-panel.active { display: block; }
+
+        .filtros-historial {
+            display: flex; gap: 15px; background: #f8f9fa; padding: 15px;
+            border-radius: 6px; margin-bottom: 20px; border: 1px solid #e2e8f0; flex-wrap: wrap;
+        }
+        .filtros-historial .filter-group { flex: 1; min-width: 150px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2>👨‍💻 Panel de Control de Papá</h2>
+            <a href="index.html" class="btn btn-logout">Cerrar Sesión 🚪</a>
+        </div>
+
+        <div class="tabs-navegacion">
+            <button class="tab-btn active" onclick="cambiarPestaña('crear')">➕ Subir Cuento</button>
+            <button class="tab-btn" onclick="cambiarPestaña('ver')">📊 Ver Cuentos e Historial</button>
+        </div>
+
+        <div id="seccionCrear" class="seccion-panel active">
+            <form id="cuentoForm">
+                <div class="form-group">
+                    <label for="titulo">Título del Cuento:</label>
+                    <input type="text" id="titulo" placeholder="Ej. Las aventuras en el bosque verde" required>
+                </div>
+                <div class="form-group">
+                    <label for="fecha">Fecha de Publicación:</label>
+                    <input type="date" id="fecha" required>
+                </div>
+                <div class="form-group">
+                    <label for="destinatario">¿Para quién es este cuento?</label>
+                    <select id="destinatario">
+                        <option value="Ambos">👶👦 Para Ambos (Thommy y Alma)</option>
+                        <option value="Thommy">👦 Solo para Thommy</option>
+                        <option value="Alma">👶 Solo para Alma</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Portada del Cuento:</label>
+                    <div class="drop-zone" id="dropZone">
+                        <span style="color: #7f8c8d;">Pega una imagen aquí o </span>
+                        <button type="button" id="triggerFile" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Explorar archivo</button>
+                        <input type="file" id="portada" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="preview-container" id="previewContainer">
+                        <img id="imgPreview" src="" alt="Vista previa">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="contenido">Cuerpo del Cuento:</label>
+                    <textarea id="contenido" placeholder="Escribe la historia aquí..." required></textarea>
+                </div>
+                <div class="preguntas-section">
+                    <h4>❓ Preguntas del cuento</h4>
+                    <div class="form-group"><input type="text" id="p1" placeholder="Pregunta 1" required></div>
+                    <div class="form-group"><input type="text" id="p2" placeholder="Pregunta 2" required></div>
+                    <div class="form-group"><input type="text" id="p3" placeholder="Pregunta 3" required></div>
+                    <div class="form-group"><input type="text" id="p4" placeholder="Pregunta 4" required></div>
+                    <div class="form-group"><input type="text" id="p5" placeholder="Pregunta 5" required></div>
+                </div>
+                <button type="submit" class="btn btn-submit">🚀 Publicar e Insertar Cuento</button>
+            </form>
+        </div>
+
+        <div id="seccionVer" class="seccion-panel">
+            <div class="filtros-historial">
+                <div class="filter-group">
+                    <label for="selectTituloPapa" style="font-size: 13px; margin-bottom: 4px;">Seleccionar Cuento:</label>
+                    <select id="selectTituloPapa">
+                        </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filtrarDestinatario" style="font-size: 13px; margin-bottom: 4px;">Destinatario:</label>
+                    <select id="filtrarDestinatario">
+                        <option value="Todos">👁️ Ver Todos</option>
+                        <option value="Ambos">👶👦 Ambos</option>
+                        <option value="Thommy">👦 Thommy</option>
+                        <option value="Alma">👶 Alma</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="filtrarFechaPapa" style="font-size: 13px; margin-bottom: 4px;">Filtrar por Fecha:</label>
+                    <input type="date" id="filtrarFechaPapa">
+                </div>
+            </div>
+
+            <div id="historialContenedor">
+                <p>Cargando registros...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="imageModal">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <img id="imgModalTarget" src="">
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/conexion.js"></script>
+    <script src="js/papa.js"></script>
+
+</body>
+</html>

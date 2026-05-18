@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma de Cuentos - Login</title>
+    <link rel="stylesheet" href="css/estilos.css">
+    <style>
+        .grid-usuarios { display: grid; grid-template-columns: repeat(3, 100px); gap: 15px; justify-content: center; margin-bottom: 25px; }
+        .avatar-btn { background: white; border: 2px solid #ccc; border-radius: 12px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .avatar-btn:hover { transform: translateY(-3px); border-color: #3498db; }
+        .avatar-btn.selected { border-color: #2ecc71; background-color: #e8f8f5; }
+        .avatar-img { font-size: 35px; display: block; margin-bottom: 5px; }
+        .avatar-name { font-weight: bold; font-size: 14px; }
+        #seccionClave { display: none; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card" style="text-align: center;">
+        <h1>📚 Cuentos Interactivos</h1>
+        <p style="color: #7f8c8d;">Selecciona tu perfil para ingresar:</p>
+        
+        <div class="grid-usuarios">
+            <div class="avatar-btn" onclick="seleccionarUsuario('Papa')">
+                <span class="avatar-img">👨‍💻</span>
+                <span class="avatar-name">Papá</span>
+            </div>
+            <div class="avatar-btn" onclick="seleccionarUsuario('Thommy')">
+                <span class="avatar-img">👦</span>
+                <span class="avatar-name">Thommy</span>
+            </div>
+            <div class="avatar-btn" onclick="seleccionarUsuario('Alma')">
+                <span class="avatar-img">👶</span>
+                <span class="avatar-name">Alma</span>
+            </div>
+        </div>
+
+        <form id="loginForm">
+            <input type="hidden" id="usuarioSeleccionado" value="">
+            
+            <div id="seccionClave">
+                <label id="labelClave" for="passwordInput">Introduce la contraseña:</label>
+                <input type="password" id="passwordInput" placeholder="Contraseña..." required style="margin-bottom: 15px;">
+                <button type="submit" class="btn btn-submit" style="background-color: #3498db;">🔑 Entrar</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/conexion.js"></script>
+    <script src="js/login.js"></script>
+
+</body>
+</html>

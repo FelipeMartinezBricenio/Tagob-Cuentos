@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Cuentos Mágicos</title>
+    <link rel="stylesheet" href="css/estilos.css">
+    <style>
+        .filtros-hijos {
+            display: flex; gap: 15px; background: #ffffff; padding: 15px;
+            border-radius: 8px; margin-bottom: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+            border: 1px solid #e2e8f0; flex-wrap: wrap;
+        }
+        .filtros-hijos .filter-group { flex: 1; min-width: 150px; }
+        
+        /* Estilos para la vista de catálogo desplegable */
+        .cuento-item-lista {
+            background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 15px; margin-bottom: 15px; cursor: pointer;
+            display: flex; align-items: center; gap: 20px; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .cuento-item-lista:hover {
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .cuento-miniatura {
+            width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #eee;
+        }
+        .cuento-contenido-detallado {
+            display: none; background: white; border: 1px solid #d2d6dc;
+            border-radius: 8px; padding: 25px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        
+        .pregunta-bloque {
+            background: #fdfefe; border: 1px solid #e2e8f0; padding: 15px;
+            border-radius: 8px; margin-top: 15px;
+        }
+        .pregunta-texto { font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
+        .controles-respuesta { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .btn-accion { padding: 8px 12px; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: bold; color: white; }
+        .btn-foto { background-color: #3498db; }
+        .btn-audio { background-color: #e67e22; }
+        .preview-media-respuesta { margin-top: 10px; max-height: 120px; display: none; border-radius: 4px; }
+        .estado-grabacion { font-size: 12px; color: #e74c3c; font-weight: bold; display: none; align-items: center; gap: 5px; }
+        .btn-volver { background-color: #7f8c8d; color: white; margin-bottom: 15px; width: auto; padding: 8px 15px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 id="saludoHijo">📖 ¡Hola! Vamos a leer</h2>
+            <a href="index.html" class="btn btn-logout">Salir 🚪</a>
+        </div>
+
+        <div class="filtros-hijos" id="zonaFiltrosHijos">
+            <div class="filter-group">
+                <label for="buscarTituloHijo" style="font-size: 13px; margin-bottom: 4px;">Buscar por título:</label>
+                <input type="text" id="buscarTituloHijo" placeholder="Escribe el nombre del cuento...">
+            </div>
+            <div class="filter-group">
+                <label for="buscarFechaHijo" style="font-size: 13px; margin-bottom: 4px;">Filtrar por Fecha:</label>
+                <input type="date" id="buscarFechaHijo">
+            </div>
+        </div>
+
+        <div id="listaCuentosCatalogo">
+            <p>Buscando tus cuentos mágicos...</p>
+        </div>
+
+        <div id="cuentoAbiertoContenedor" class="cuento-contenido-detallado">
+            </div>
+    </div>
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/conexion.js"></script>
+    <script src="js/hijos.js"></script>
+
+</body>
+</html>
