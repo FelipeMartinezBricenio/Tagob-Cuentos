@@ -11,12 +11,11 @@
         .tab-btn.active { background: #3498db; color: white; }
         .seccion-panel { display: none; }
         .seccion-panel.active { display: block; }
-
-        .filtros-historial {
-            display: flex; gap: 15px; background: #f8f9fa; padding: 15px;
-            border-radius: 6px; margin-bottom: 20px; border: 1px solid #e2e8f0; flex-wrap: wrap;
-        }
+        .filtros-historial { display: flex; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #e2e8f0; flex-wrap: wrap; }
         .filtros-historial .filter-group { flex: 1; min-width: 150px; }
+        /* Estilo para previsualizar múltiples fotos del cuerpo */
+        #previewCuerpoContainer { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .img-cuerpo-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
@@ -36,7 +35,7 @@
             <form id="cuentoForm">
                 <div class="form-group">
                     <label for="titulo">Título del Cuento:</label>
-                    <input type="text" id="titulo" placeholder="Ej. Las aventuras en el bosque verde" required>
+                    <input type="text" id="titulo" placeholder="Ej. El dragón que no sabía escupir fuego" required>
                 </div>
                 <div class="form-group">
                     <label for="fecha">Fecha de Publicación:</label>
@@ -50,21 +49,30 @@
                         <option value="Alma">👶 Solo para Alma</option>
                     </select>
                 </div>
+                
                 <div class="form-group">
-                    <label>Portada del Cuento:</label>
+                    <label>Portada Principal del Cuento:</label>
                     <div class="drop-zone" id="dropZone">
-                        <span style="color: #7f8c8d;">Pega una imagen aquí o </span>
-                        <button type="button" id="triggerFile" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Explorar archivo</button>
+                        <span style="color: #7f8c8d;">Pega la portada aquí o </span>
+                        <button type="button" id="triggerFile" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Explorar</button>
                         <input type="file" id="portada" accept="image/*" style="display: none;">
                     </div>
                     <div class="preview-container" id="previewContainer">
                         <img id="imgPreview" src="" alt="Vista previa">
                     </div>
                 </div>
+
                 <div class="form-group">
-                    <label for="contenido">Cuerpo del Cuento:</label>
+                    <label for="contenido">Cuerpo / Texto del Cuento:</label>
                     <textarea id="contenido" placeholder="Escribe la historia aquí..." required></textarea>
                 </div>
+
+                <div class="form-group">
+                    <label>Ilustraciones para el cuerpo del cuento (puedes subir varias):</label>
+                    <input type="file" id="fotosCuerpo" accept="image/*" multiple style="margin-bottom:10px;">
+                    <div id="previewCuerpoContainer"></div>
+                </div>
+
                 <div class="preguntas-section">
                     <h4>❓ Preguntas del cuento</h4>
                     <div class="form-group"><input type="text" id="p1" placeholder="Pregunta 1" required></div>
@@ -73,7 +81,7 @@
                     <div class="form-group"><input type="text" id="p4" placeholder="Pregunta 4" required></div>
                     <div class="form-group"><input type="text" id="p5" placeholder="Pregunta 5" required></div>
                 </div>
-                <button type="submit" class="btn btn-submit">🚀 Publicar e Insertar Cuento</button>
+                <button type="submit" class="btn btn-submit">🚀 Publicar e Ilustrar Cuento</button>
             </form>
         </div>
 
@@ -81,8 +89,7 @@
             <div class="filtros-historial">
                 <div class="filter-group">
                     <label for="selectTituloPapa" style="font-size: 13px; margin-bottom: 4px;">Seleccionar Cuento:</label>
-                    <select id="selectTituloPapa">
-                        </select>
+                    <select id="selectTituloPapa"></select>
                 </div>
                 <div class="filter-group">
                     <label for="filtrarDestinatario" style="font-size: 13px; margin-bottom: 4px;">Destinatario:</label>
@@ -98,10 +105,7 @@
                     <input type="date" id="filtrarFechaPapa">
                 </div>
             </div>
-
-            <div id="historialContenedor">
-                <p>Cargando registros...</p>
-            </div>
+            <div id="historialContenedor"><p>Cargando registros...</p></div>
         </div>
     </div>
 
@@ -113,6 +117,5 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/conexion.js"></script>
     <script src="js/papa.js"></script>
-
 </body>
 </html>
