@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let todosLosCuentosHijo = [];
     let archivosTemporalesCuestionario = {};
 
-    // Visor adaptativo de pantalla completa para las imágenes
+    // 1. INYECTAR MODAL DE PANTALLA COMPLETA INMEDIATAMENTE
     const modalHtml = `
         <div id="hijoImageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:99999; justify-content:center; align-items:center; flex-direction:column; padding:10px; box-sizing:border-box;">
             <span id="closeHijoModal" style="position:absolute; top:20px; right:25px; color:white; font-size:45px; font-weight:bold; cursor:pointer; user-select:none; background:rgba(255,255,255,0.2); width:50px; height:50px; display:flex; justify-content:center; align-items:center; border-radius:50%;">&times;</span>
@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+    // Asignar eventos de cierre al modal
     document.getElementById('closeHijoModal').onclick = () => {
         document.getElementById('hijoImageModal').style.display = "none";
     };
@@ -40,11 +41,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(e.target.id === 'hijoImageModal') document.getElementById('hijoImageModal').style.display = "none";
     };
 
+    // FUNCIÓN GLOBAL PARA PANTALLA COMPLETA (Accesible desde el HTML dinámico)
     window.abrirImagenPantallaCompleta = function(url) {
         const m = document.getElementById('hijoImageModal');
         const img = document.getElementById('imgHijoModalTarget');
-        img.src = url;
-        m.style.display = "flex";
+        if (m && img) {
+            img.src = url;
+            m.style.display = "flex";
+        }
     };
 
     descargarCuentosBase();
@@ -109,8 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         archivosTemporalesCuestionario = {};
 
+        // REPARACIÓN DEL CUERPO DE IMÁGENES
         let ilustracionesCuerpoHtml = '';
-        // Mapeo flexible para las columnas de imágenes del cuerpo
         let arrayImagenes = cuento.imagenes_cuerpo || cuento.imagenes_imagenes || [];
         
         if (typeof arrayImagenes === 'string') {
@@ -125,8 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div style="text-align:center; width:100%;">
                             <img src="${url}" 
                                  style="max-width:100%; width:auto; max-height:380px; border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,0.06); object-fit:contain; cursor:pointer; transition: transform 0.2s; -webkit-tap-highlight-color: transparent;" 
-                                 onclick="abrirImagenPantallaCompleta('${url}')"
-                                 alt="Imagen del cuento. Toca para ver en pantalla completa">
+                                 onclick="window.abrirImagenPantallaCompleta('${url}')"
+                                 alt="Imagen del cuento">
                             <div style="color:#7f8c8d; font-size:12px; margin-top:5px; font-style:italic;">👆 Toca la foto para verla en grande</div>
                         </div>
                     `;
@@ -283,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if(item.archivo) {
                     const nombreArchivo = `${lector}_resp_${Date.now()}_p${item.index}.${item.tipo === 'audio' ? 'mp3' : 'png'}`;
                     
-                    // CORRECCIÓN CLAVE: Apunta exactamente a tu Bucket "respuestas-hijos"
+                    // CORRECCIÓN EXACTA: Conectado a tu Storage bucket "respuestas-hijos"
                     const { error: uploadError } = await window.supabaseClient.storage
                         .from('respuestas-hijos')
                         .upload(nombreArchivo, item.archivo);
