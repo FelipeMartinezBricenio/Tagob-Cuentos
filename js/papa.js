@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtrarFechaPapa = document.getElementById('filtrarFechaPapa');
 
     let archivoPortadaGlobal = null;
-    let archivosCuerpoGlobal = [];
+    let archivosCuerpoGlobal = []; // Array donde se acumularán todas las imágenes del cuerpo
     let todosLosCuentosGlobal = [];
 
     cargarHistorial();
@@ -40,26 +40,30 @@ document.addEventListener('DOMContentLoaded', () => {
         triggerFile.addEventListener('click', (e) => { e.stopPropagation(); portadaInput.click(); });
     }
 
+    // =========================================================================
+    // SINOPSIS DE MEJORA: CAPTURA DE PORTADA Y CONTROL+V MULTIPLE PARA EL CUERPO
+    // =========================================================================
     document.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        
+        // Buscamos si hay imágenes en lo que se acaba de pegar
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 const blob = items[i].getAsFile();
-                archivoPortadaGlobal = new File([blob], `portada_${Date.now()}.png`, { type: 'image/png' });
-                mostrarVistaPrevia(archivoPortadaGlobal);
-                break;
+                
+                // Si la portada principal está vacía, el primer pegado va para la portada
+                if (!archivoPortadaGlobal) {
+                    archivoPortadaGlobal = new File([blob], `portada_${Date.now()}.png`, { type: 'image/png' });
+                    mostrarVistaPrevia(archivoPortadaGlobal);
+                } else {
+                    // Si ya hay portada, CUALQUIER pegado posterior se acumula en el cuerpo del cuento
+                    const nuevoArchivoCuerpo = new File([blob], `cuerpo_${Date.now()}_${Math.floor(Math.random()*1000)}.png`, { type: 'image/png' });
+                    archivosCuerpoGlobal.push(nuevoArchivoCuerpo);
+                    actualizarVistaPreviaCuerpo();
+                }
             }
         }
     });
-
-    if (portadaInput) {
-        portadaInput.addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) {
-                archivoPortadaGlobal = e.target.files[0];
-                mostrarVistaPrevia(archivoPortadaGlobal);
-            }
-        });
-    }
 
     function mostrarVistaPrevia(file) {
         const reader = new FileReader();
@@ -67,19 +71,46 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     }
 
+    // Listener normal por si decides seleccionar los archivos desde la ventana de diálogo
     if (fotosCuerpoInput) {
         fotosCuerpoInput.addEventListener('change', (e) => {
-            archivosCuerpoGlobal = Array.from(e.target.files);
-            previewCuerpoContainer.innerHTML = '';
-            
-            archivosCuerpoGlobal.forEach(file => {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                img.style = "width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; margin: 4px;";
-                previewCuerpoContainer.appendChild(img);
-            });
+            if (e.target.files) {
+                // Con esto permitimos que si seleccionas archivos por diálogo, se SUMEN a los ya pegados
+                const nuevosArchivos = Array.from(e.target.files);
+                archivosCuerpoGlobal = archivosCuerpoGlobal.concat(nuevosArchivos);
+                actualizarVistaPreviaCuerpo();
+            }
         });
     }
+
+    // Función encargada de redibujar la fila de imágenes acumuladas para el cuerpo
+    function actualizarVistaPreviaCuerpo() {
+        if (!previewCuerpoContainer) return;
+        previewCuerpoContainer.innerHTML = '';
+        
+        archivosCuerpoGlobal.forEach((file, index) => {
+            const wrapper = document.createElement('div');
+            wrapper.style = "position:relative; display:inline-block; margin:4px;";
+
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style = "width:70px; height:70px; object-fit:cover; border-radius:6px; border:1px solid #ddd;";
+            
+            // Botón pequeño para remover una imagen específica si te equivocas al pegar
+            const btnBorrar = document.createElement('span');
+            btnBorrar.innerHTML = "&times;";
+            btnBorrar.style = "position:absolute; top:-4px; right:-4px; background:#e74c3c; color:white; border-radius:50%; width:16px; height:16px; display:flex; justify-content:center; align-items:center; font-size:11px; cursor:pointer; font-weight:bold; box-shadow:0 1px 4px rgba(0,0,0,0.2);";
+            btnBorrar.onclick = () => {
+                archivosCuerpoGlobal.splice(index, 1);
+                actualizarVistaPreviaCuerpo();
+            };
+
+            wrapper.appendChild(img);
+            wrapper.appendChild(btnBorrar);
+            previewCuerpoContainer.appendChild(wrapper);
+        });
+    }
+    // =========================================================================
 
     if(selectTituloPapa) selectTituloPapa.addEventListener('change', aplicarFiltros);
     if(filtrarDestinatario) filtrarDestinatario.addEventListener('change', aplicarFiltros);
@@ -136,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('¡Libro ilustrado publicado con éxito! 🚀');
             document.getElementById('cuentoForm').reset();
             previewContainer.style.display = 'none';
-            previewCuerpoContainer.innerHTML = '';
+            if (previewCuerpoContainer) previewCuerpoContainer.innerHTML = '';
             archivoPortadaGlobal = null;
             archivosCuerpoGlobal = [];
             if (fechaInput) fechaInput.value = hoy;
