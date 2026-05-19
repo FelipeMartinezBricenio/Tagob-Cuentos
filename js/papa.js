@@ -11,13 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const triggerFile = document.getElementById('triggerFile');
     const previewContainer = document.getElementById('previewContainer');
     const imgPreview = document.getElementById('imgPreview');
+    const contenidoTextArea = document.getElementById('contenido'); // Cuadro de texto del cuento
 
     const selectTituloPapa = document.getElementById('selectTituloPapa');
     const filtrarDestinatario = document.getElementById('filtrarDestinatario');
     const filtrarFechaPapa = document.getElementById('filtrarFechaPapa');
 
     let archivoPortadaGlobal = null;
-    let archivosCuerpoGlobal = []; // Array donde se acumularán todas las imágenes del cuerpo
+    let archivosCuerpoGlobal = []; 
     let todosLosCuentosGlobal = [];
 
     cargarHistorial();
@@ -41,29 +42,37 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =========================================================================
-    // SINOPSIS DE MEJORA: CAPTURA DE PORTADA Y CONTROL+V MULTIPLE PARA EL CUERPO
+    // FUNCIÓN MEJORADA: CAPTURA ENFOQUE TOTAL PARA CTRL + V
     // =========================================================================
-    document.addEventListener('paste', (e) => {
+    const procesarPegadoEspecial = (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-        
-        // Buscamos si hay imágenes en lo que se acaba de pegar
+        let imagenDetectada = false;
+
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 const blob = items[i].getAsFile();
+                imagenDetectada = true;
                 
-                // Si la portada principal está vacía, el primer pegado va para la portada
+                // Si no hay portada principal, el primer pegado la asigna
                 if (!archivoPortadaGlobal) {
                     archivoPortadaGlobal = new File([blob], `portada_${Date.now()}.png`, { type: 'image/png' });
                     mostrarVistaPrevia(archivoPortadaGlobal);
                 } else {
-                    // Si ya hay portada, CUALQUIER pegado posterior se acumula en el cuerpo del cuento
+                    // Los siguientes pegados se acumulan en el cuerpo de forma ilimitada
                     const nuevoArchivoCuerpo = new File([blob], `cuerpo_${Date.now()}_${Math.floor(Math.random()*1000)}.png`, { type: 'image/png' });
                     archivosCuerpoGlobal.push(nuevoArchivoCuerpo);
                     actualizarVistaPreviaCuerpo();
                 }
             }
         }
-    });
+        // Si pegaste una imagen dentro del cuadro de texto, evitamos que pinte texto basura en el área
+        if (imagenDetectada) { e.preventDefault(); }
+    };
+
+    // Escuchar el comando en toda la página, en el área de texto y en la zona de soltar archivos
+    document.addEventListener('paste', procesarPegadoEspecial);
+    if (contenidoTextArea) contenidoTextArea.addEventListener('paste', procesarPegadoEspecial);
+    if (dropZone) dropZone.addEventListener('paste', procesarPegadoEspecial);
 
     function mostrarVistaPrevia(file) {
         const reader = new FileReader();
@@ -71,11 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     }
 
-    // Listener normal por si decides seleccionar los archivos desde la ventana de diálogo
     if (fotosCuerpoInput) {
         fotosCuerpoInput.addEventListener('change', (e) => {
             if (e.target.files) {
-                // Con esto permitimos que si seleccionas archivos por diálogo, se SUMEN a los ya pegados
                 const nuevosArchivos = Array.from(e.target.files);
                 archivosCuerpoGlobal = archivosCuerpoGlobal.concat(nuevosArchivos);
                 actualizarVistaPreviaCuerpo();
@@ -83,24 +90,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Función encargada de redibujar la fila de imágenes acumuladas para el cuerpo
     function actualizarVistaPreviaCuerpo() {
         if (!previewCuerpoContainer) return;
         previewCuerpoContainer.innerHTML = '';
         
         archivosCuerpoGlobal.forEach((file, index) => {
             const wrapper = document.createElement('div');
-            wrapper.style = "position:relative; display:inline-block; margin:4px;";
+            wrapper.style = "position:relative; display:inline-block; margin:6px;";
 
             const img = document.createElement('img');
             img.src = URL.createObjectURL(file);
-            img.style = "width:70px; height:70px; object-fit:cover; border-radius:6px; border:1px solid #ddd;";
+            img.style = "width:75px; height:75px; object-fit:cover; border-radius:8px; border:2px solid #3498db;";
             
-            // Botón pequeño para remover una imagen específica si te equivocas al pegar
             const btnBorrar = document.createElement('span');
             btnBorrar.innerHTML = "&times;";
-            btnBorrar.style = "position:absolute; top:-4px; right:-4px; background:#e74c3c; color:white; border-radius:50%; width:16px; height:16px; display:flex; justify-content:center; align-items:center; font-size:11px; cursor:pointer; font-weight:bold; box-shadow:0 1px 4px rgba(0,0,0,0.2);";
-            btnBorrar.onclick = () => {
+            btnBorrar.style = "position:absolute; top:-6px; right:-6px; background:#e74c3c; color:white; border-radius:50%; width:18px; height:18px; display:flex; justify-content:center; align-items:center; font-size:12px; cursor:pointer; font-weight:bold; box-shadow:0 1px 4px rgba(0,0,0,0.3);";
+            btnBorrar.onclick = (e) => {
+                e.stopPropagation();
                 archivosCuerpoGlobal.splice(index, 1);
                 actualizarVistaPreviaCuerpo();
             };
@@ -123,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const destinatario = document.getElementById('destinatario').value;
         const fecha = fechaInput ? fechaInput.value : hoy;
 
-        if (!archivoPortadaGlobal) { alert('❌ Selecciona o pega una imagen de portada principal.'); return; }
+        if (!archivoPortadaGlobal) { alert('❌ Por favor añade una imagen de portada principal.'); return; }
 
         const preguntas = [
             document.getElementById('p1').value.trim(),
@@ -134,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         try {
+            // 1. Guardar Portada en bucket "portadas"
             const nombreArchivoPortada = `portada_${Date.now()}.png`;
             const { error: uploadPortadaError } = await window.supabaseClient.storage
                 .from('portadas')
@@ -143,18 +150,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const { data: urlDataPortada } = window.supabaseClient.storage.from('portadas').getPublicUrl(nombreArchivoPortada);
             const urlPortadaFinal = urlDataPortada.publicUrl;
 
+            // 2. Guardar archivos del cuerpo en bucket "respuestas-hijos"
             let urlsImagenesCuerpo = [];
             for (let i = 0; i < archivosCuerpoGlobal.length; i++) {
                 const file = archivosCuerpoGlobal[i];
                 const nombreArchivoCuerpo = `cuerpo_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.png`;
                 
                 const { error: uploadCuerpoError } = await window.supabaseClient.storage
-                    .from('portadas')
+                    .from('respuestas-hijos') // Corregido para usar tu bucket verificado
                     .upload(nombreArchivoCuerpo, file);
                 
                 if (uploadCuerpoError) throw uploadCuerpoError;
                 
-                const { data: urlDataCuerpo } = window.supabaseClient.storage.from('portadas').getPublicUrl(nombreArchivoCuerpo);
+                const { data: urlDataCuerpo } = window.supabaseClient.storage.from('respuestas-hijos').getPublicUrl(nombreArchivoCuerpo);
                 urlsImagenesCuerpo.push(urlDataCuerpo.publicUrl);
             }
 
@@ -254,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         let archivoHtml = '';
                         if (r.respuesta_archivo_url) {
                             if (r.tipo_archivo === 'audio') {
-                                archivoHtml = `<br><audio controls src="${r.respuesta_archivo_url}" style="margin-top:5px; height:32px; width:100%; max-width:240px Papá;"></audio>`;
+                                archivoHtml = `<br><audio controls src="${r.respuesta_archivo_url}" style="margin-top:5px; height:32px; width:100%; max-width:240px;"></audio>`;
                             } else {
                                 archivoHtml = `<br><img src="${r.respuesta_archivo_url}" style="max-height:90px; margin-top:5px; border-radius:6px; cursor:pointer;" onclick="event.stopPropagation(); abrirModal('${r.respuesta_archivo_url}')">`;
                             }
