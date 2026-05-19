@@ -5,17 +5,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fechaInput) fechaInput.value = hoy;
 
     const portadaInput = document.getElementById('portada');
+    const fotosCuerpoInput = document.getElementById('fotosCuerpo');
+    const previewCuerpoContainer = document.getElementById('previewCuerpoContainer');
     const dropZone = document.getElementById('dropZone');
     const triggerFile = document.getElementById('triggerFile');
     const previewContainer = document.getElementById('previewContainer');
     const imgPreview = document.getElementById('imgPreview');
 
-    // Filtros
     const selectTituloPapa = document.getElementById('selectTituloPapa');
     const filtrarDestinatario = document.getElementById('filtrarDestinatario');
     const filtrarFechaPapa = document.getElementById('filtrarFechaPapa');
 
-    let archivoImagenGlobal = null;
+    let archivoPortadaGlobal = null;
+    let archivosCuerpoGlobal = [];
     let todosLosCuentosGlobal = [];
 
     cargarHistorial();
@@ -43,9 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < items.length; i++) {
             if (items[i].type.indexOf('image') !== -1) {
                 const blob = items[i].getAsFile();
-                const file = new File([blob], `portada_${Date.now()}.png`, { type: 'image/png' });
-                archivoImagenGlobal = file;
-                mostrarVistaPrevia(file);
+                archivoPortadaGlobal = new File([blob], `portada_${Date.now()}.png`, { type: 'image/png' });
+                mostrarVistaPrevia(archivoPortadaGlobal);
                 break;
             }
         }
@@ -54,8 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (portadaInput) {
         portadaInput.addEventListener('change', (e) => {
             if (e.target.files && e.target.files[0]) {
-                archivoImagenGlobal = e.target.files[0];
-                mostrarVistaPrevia(e.target.files[0]);
+                archivoPortadaGlobal = e.target.files[0];
+                mostrarVistaPrevia(archivoPortadaGlobal);
             }
         });
     }
@@ -66,6 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     }
 
+    if (fotosCuerpoInput) {
+        fotosCuerpoInput.addEventListener('change', (e) => {
+            archivosCuerpoGlobal = Array.from(e.target.files);
+            previewCuerpoContainer.innerHTML = '';
+            
+            archivosCuerpoGlobal.forEach(file => {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.style = "width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; margin: 4px;";
+                previewCuerpoContainer.appendChild(img);
+            });
+        });
+    }
+
     if(selectTituloPapa) selectTituloPapa.addEventListener('change', aplicarFiltros);
     if(filtrarDestinatario) filtrarDestinatario.addEventListener('change', aplicarFiltros);
     if(filtrarFechaPapa) filtrarFechaPapa.addEventListener('change', aplicarFiltros);
@@ -73,11 +88,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cuentoForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const titulo = document.getElementById('titulo').value.trim();
-        const fecha = fechaInput ? fechaInput.value : hoy;
         const contenido = document.getElementById('contenido').value.trim();
         const destinatario = document.getElementById('destinatario').value;
+        const fecha = fechaInput ? fechaInput.value : hoy;
 
-        if (!archivoImagenGlobal) { alert('❌ Selecciona o pega una imagen de portada.'); return; }
+        if (!archivoPortadaGlobal) { alert('❌ Selecciona o pega una imagen de portada principal.'); return; }
 
         const preguntas = [
             document.getElementById('p1').value.trim(),
@@ -88,30 +103,46 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
         try {
-            const nombreArchivo = `portada_${Date.now()}.png`;
-            const { error: uploadError } = await window.supabaseClient.storage
+            const nombreArchivoPortada = `portada_${Date.now()}.png`;
+            const { error: uploadPortadaError } = await window.supabaseClient.storage
                 .from('portadas')
-                .upload(nombreArchivo, archivoImagenGlobal);
+                .upload(nombreArchivoPortada, archivoPortadaGlobal);
 
-            if (uploadError) throw uploadError;
+            if (uploadPortadaError) throw uploadPortadaError;
+            const { data: urlDataPortada } = window.supabaseClient.storage.from('portadas').getPublicUrl(nombreArchivoPortada);
+            const urlPortadaFinal = urlDataPortada.publicUrl;
 
-            const { data: urlData } = window.supabaseClient.storage.from('portadas').getPublicUrl(nombreArchivo);
+            let urlsImagenesCuerpo = [];
+            for (let i = 0; i < archivosCuerpoGlobal.length; i++) {
+                const file = archivosCuerpoGlobal[i];
+                const nombreArchivoCuerpo = `cuerpo_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.png`;
+                
+                const { error: uploadCuerpoError } = await window.supabaseClient.storage
+                    .from('portadas')
+                    .upload(nombreArchivoCuerpo, file);
+                
+                if (uploadCuerpoError) throw uploadCuerpoError;
+                
+                const { data: urlDataCuerpo } = window.supabaseClient.storage.from('portadas').getPublicUrl(nombreArchivoCuerpo);
+                urlsImagenesCuerpo.push(urlDataCuerpo.publicUrl);
+            }
 
             const { error: insertError } = await window.supabaseClient.from('cuentos').insert([{
-                titulo, contenido, fecha_publicacion: fecha, imagen_url: urlData.publicUrl, preguntas, destinatario
+                titulo, contenido, fecha_publicacion: fecha, imagen_url: urlPortadaFinal, preguntas, destinatario, imagenes_cuerpo: urlsImagenesCuerpo
             }]);
 
             if (insertError) throw insertError;
 
-            alert('¡Cuentazo guardado con éxito! 🚀');
+            alert('¡Libro ilustrado publicado con éxito! 🚀');
             document.getElementById('cuentoForm').reset();
             previewContainer.style.display = 'none';
-            archivoImagenGlobal = null;
+            previewCuerpoContainer.innerHTML = '';
+            archivoPortadaGlobal = null;
+            archivosCuerpoGlobal = [];
             if (fechaInput) fechaInput.value = hoy;
             cargarHistorial();
-        } catch (err) {
-            alert('Error: ' + err.message);
-        }
+
+        } catch (err) { alert('Error al guardar cuento: ' + err.message); }
     });
 
     async function cargarHistorial() {
@@ -121,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const { data: cuentos, error } = await window.supabaseClient
                 .from('cuentos')
-                .select('id, titulo, contenido, fecha_publicacion, preguntas, imagen_url, destinatario, respuestas_hijos(lector, pregunta_index, respuesta_texto, respuesta_archivo_url, tipo_archivo)')
+                .select('id, titulo, contenido, fecha_publicacion, preguntas, imagen_url, destinatario, imagenes_cuerpo, respuestas_hijos(lector, pregunta_index, respuesta_texto, respuesta_archivo_url, tipo_archivo)')
                 .order('fecha_publicacion', { ascending: false });
 
             if (error) throw error;
@@ -137,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             aplicarFiltros();
-        } catch (err) { contenedor.innerHTML = 'Error al cargar.'; }
+        } catch (err) { contenedor.innerHTML = 'Error al cargar el historial.'; }
     }
 
     function aplicarFiltros() {
@@ -163,46 +194,42 @@ document.addEventListener('DOMContentLoaded', () => {
         contenedor.innerHTML = '';
         cuentosFiltrados.forEach(c => {
             const card = document.createElement('div');
-            card.style = "background:white; border:1px solid #e2e8f0; border-radius:8px; padding:15px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.02);";
+            card.style = "background:white; border:1px solid #e2e8f0; border-radius:12px; padding:15px; margin-bottom:15px; box-shadow:0 2px 8 rgba(0,0,0,0.04);";
             
-            // 1. ANALIZAR QUIÉN RESPONDIÓ (Mapeo de respuestas de la subtabla)
             const respuestas = c.respuestas_hijos || [];
             const tieneRespuestasDe = (nombre) => respuestas.some(r => r.lector.toLowerCase() === nombre.toLowerCase());
 
             let estadoLectoresHtml = '';
             if (c.destinatario === 'Thommy' || c.destinatario === 'Ambos') {
                 const respondio = tieneRespuestasDe('Thommy');
-                estadoLectoresHtml += `<span style="background:${respondio ? '#2ecc71' : '#e74c3c'}; color:white; font-size:11px; padding:2px 8px; border-radius:10px; margin-right:5px; font-weight:bold;">👦 Thommy: ${respondio ? '✅ Respondió' : '⏳ Pendiente'}</span>`;
+                estadoLectoresHtml += `<span style="background:${respondio ? '#2ecc71' : '#e74c3c'}; color:white; font-size:11px; padding:3px 8px; border-radius:20px; margin-right:5px; font-weight:bold; display:inline-block; margin-bottom:4px;">👦 Thommy: ${respondio ? '✅' : '⏳'}</span>`;
             }
             if (c.destinatario === 'Alma' || c.destinatario === 'Ambos') {
                 const respondio = tieneRespuestasDe('Alma');
-                estadoLectoresHtml += `<span style="background:${respondio ? '#2ecc71' : '#e74c3c'}; color:white; font-size:11px; padding:2px 8px; border-radius:10px; font-weight:bold;">👶 Alma: ${respondio ? '✅ Respondió' : '⏳ Pendiente'}</span>`;
+                estadoLectoresHtml += `<span style="background:${respondio ? '#2ecc71' : '#e74c3c'}; color:white; font-size:11px; padding:3px 8px; border-radius:20px; font-weight:bold; display:inline-block; margin-bottom:4px;">👶 Alma: ${respondio ? '✅' : '⏳'}</span>`;
             }
 
-            // 2. CONSTRUIR VISTA DE PREGUNTAS Y RESPUESTAS AGRUPADAS POR PREGUNTA (Para el bloque expandible)
             let preguntasAgrupadasHtml = '';
             if (c.preguntas && c.preguntas.length > 0) {
                 c.preguntas.forEach((pregunta, pIndex) => {
-                    if (!pregunta) return; // Saltar campos vacíos si los hay
+                    if (!pregunta) return;
 
-                    // Buscar respuestas de esta pregunta específica para Thommy y Alma
                     const respThommy = respuestas.find(r => r.pregunta_index === pIndex && r.lector.toLowerCase() === 'thommy');
                     const respAlma = respuestas.find(r => r.pregunta_index === pIndex && r.lector.toLowerCase() === 'alma');
 
-                    // Función interna para renderizar el bloque multimedia de texto/audio/foto
                     const construirBloqueRespuesta = (r, colorFondo) => {
-                        if (!r) return `<div style="background:${colorFondo}; padding:8px; border-radius:4px; font-size:13px; color:#7f8c8d; font-style:italic; border-left:3px solid #ccc;">Sin respuesta aún.</div>`;
+                        if (!r) return `<div style="background:${colorFondo}; padding:8px; border-radius:6px; font-size:13px; color:#7f8c8d; font-style:italic; border-left:3px solid #ccc;">Sin respuesta aún.</div>`;
                         
                         let archivoHtml = '';
                         if (r.respuesta_archivo_url) {
                             if (r.tipo_archivo === 'audio') {
-                                archivoHtml = `<br><audio controls src="${r.respuesta_archivo_url}" style="margin-top:5px; height:28px; width:100%; max-width:240px;"></audio>`;
+                                archivoHtml = `<br><audio controls src="${r.respuesta_archivo_url}" style="margin-top:5px; height:32px; width:100%; max-width:240px Papá;"></audio>`;
                             } else {
-                                archivoHtml = `<br><img src="${r.respuesta_archivo_url}" class="thumbnail-img" style="max-height:80px; margin-top:5px; border-radius:4px; cursor:pointer;" onclick="event.stopPropagation(); abrirModal('${r.respuesta_archivo_url}')">`;
+                                archivoHtml = `<br><img src="${r.respuesta_archivo_url}" style="max-height:90px; margin-top:5px; border-radius:6px; cursor:pointer;" onclick="event.stopPropagation(); abrirModal('${r.respuesta_archivo_url}')">`;
                             }
                         }
                         return `
-                            <div style="background:${colorFondo}; padding:8px; border-radius:4px; font-size:13px; border-left:3px solid #34495e;">
+                            <div style="background:${colorFondo}; padding:10px; border-radius:6px; font-size:13px; border-left:3px solid #34495e;">
                                 💬 ${r.respuesta_texto || '<span style="color:#7f8c8d; font-style:italic;">Adjuntó archivo</span>'} ${archivoHtml}
                             </div>
                         `;
@@ -211,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     let bloquesRespuestaParalelos = '';
                     if (c.destinatario === 'Ambos') {
                         bloquesRespuestaParalelos = `
-                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:5px;">
+                            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-top:5px;">
                                 <div><b style="font-size:11px; color:#27ae60;">👦 Resp. Thommy:</b> ${construirBloqueRespuesta(respThommy, '#ebf5fb')}</div>
                                 <div><b style="font-size:11px; color:#8e44ad;">👶 Resp. Alma:</b> ${construirBloqueRespuesta(respAlma, '#f5eef8')}</div>
                             </div>
@@ -223,23 +250,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     preguntasAgrupadasHtml += `
-                        <div style="margin-bottom:12px; background:#fcfcfc; padding:10px; border-radius:6px; border:1px solid #edf2f7;">
-                            <div style="font-weight:bold; color:#2c3e50; font-size:13px;">❓ ${pIndex + 1}. ${pregunta}</div>
+                        <div style="margin-bottom:12px; background:#fcfcfc; padding:12px; border-radius:8px; border:1px solid #edf2f7;">
+                            <div style="font-weight:bold; color:#2c3e50; font-size:13px; margin-bottom:5px;">❓ ${pIndex + 1}. ${pregunta}</div>
                             ${bloquesRespuestaParalelos}
                         </div>
                     `;
                 });
             }
 
-            // 3. ESTRUCTURA HTML DE LA FILA (RESUMEN + SECCIÓN EXPANDIBLE OCULTA)
+            let miniGaleriaCuerpoHtml = '';
+            if (c.imagenes_cuerpo && c.imagenes_cuerpo.length > 0) {
+                miniGaleriaCuerpoHtml = `<div style="display:flex; gap:6px; margin: 10px 0; flex-wrap:wrap;">`;
+                c.imagenes_cuerpo.forEach(url => {
+                    miniGaleriaCuerpoHtml += `<img src="${url}" style="width:55px; height:55px; object-fit:cover; border-radius:6px; border:1px solid #ddd; cursor:pointer;" onclick="event.stopPropagation(); abrirModal('${url}')">`;
+                });
+                miniGaleriaCuerpoHtml += `</div>`;
+            }
+
             const detalleId = `detalle-cuento-${c.id}`;
             card.innerHTML = `
                 <div style="display:flex; gap:15px; align-items:center; justify-content:space-between; cursor:pointer; flex-wrap:wrap;" onclick="toggleDetalleCuento('${detalleId}')">
-                    <div style="display:flex; gap:12px; align-items:center;">
-                        <img src="${c.imagen_url}" style="width:45px; height:45px; object-fit:cover; border-radius:6px; border:1px solid #e2e8f0;">
+                    <div style="display:flex; gap:12px; align-items:center; min-width:200px;">
+                        <img src="${c.imagen_url}" style="width:50px; height:50px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0;">
                         <div>
                             <h4 style="margin:0; color:#2c3e50; font-size:15px;">📖 ${c.titulo}</h4>
-                            <span style="color:#7f8c8d; font-size:12px;">📅 ${c.fecha_publicacion}</span>
+                            <span style="color:#7f8c8d; font-size:11px;">📅 ${c.fecha_publicacion}</span>
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
@@ -249,10 +284,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <div id="${detalleId}" style="display:none; margin-top:15px; border-top:1px dashed #cbd5e1; padding-top:15px;">
-                    <div style="background:#f8fafc; border-radius:6px; padding:12px; margin-bottom:15px; font-size:13px; color:#475569; max-height:120px; overflow-y:auto; white-space:pre-wrap;">
+                    <div style="background:#f8fafc; border-radius:8px; padding:12px; margin-bottom:10px; font-size:13px; color:#475569; max-height:150px; overflow-y:auto; white-space:pre-wrap; line-height:1.5;">
                         <b>Cuerpo del cuento leído:</b><br>${c.contenido}
                     </div>
-                    <h5 style="margin:0 0 10px 0; color:#e67e22; font-size:13px; font-weight:bold;">📊 Cuestionario y Respuestas de los Niños:</h5>
+                    ${miniGaleriaCuerpoHtml}
+                    <h5 style="margin:15px 0 10px 0; color:#e67e22; font-size:13px; font-weight:bold;">📊 Cuestionario y Respuestas de los Niños:</h5>
                     ${preguntasAgrupadasHtml}
                 </div>
             `;
@@ -260,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Función global para manejar el acordeón dinámico
     window.toggleDetalleCuento = function(id) {
         const elemento = document.getElementById(id);
         const flecha = document.getElementById(`flecha-${id}`);
