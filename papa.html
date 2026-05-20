@@ -2,124 +2,156 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Panel de Control - Papá</title>
     <link rel="stylesheet" href="css/estilos.css">
     <style>
-        .tabs-navegacion { display: flex; gap: 10px; margin-bottom: 25px; border-bottom: 2px solid #ccc; padding-bottom: 10px; }
-        .tab-btn { padding: 10px 20px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 6px; cursor: pointer; transition: 0.3s; }
-        .tab-btn.active { background: #3498db; color: white; }
+        .tabs-navegacion { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 14px; font-weight: bold; border: none; background: rgba(226, 232, 240, 0.9); border-radius: 16px; cursor: pointer; transition: 0.3s; font-size: 15px; color: #1e293b; }
+        .tab-btn.active { background: #6366f1; color: white; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
         .seccion-panel { display: none; }
-        .seccion-panel.active { display: block; }
-        .filtros-historial { display: flex; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #e2e8f0; flex-wrap: wrap; }
-        .filtros-historial .filter-group { flex: 1; min-width: 150px; }
-        /* Estilo para previsualizar múltiples fotos del cuerpo */
+        .seccion-panel.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        .filtros-historial { display: flex; gap: 12px; background: rgba(248, 250, 252, 0.95); padding: 15px; border-radius: 16px; margin-bottom: 20px; border: 1px solid #e2e8f0; flex-wrap: wrap; }
+        .filtros-historial .filter-group { flex: 1; min-width: 140px; display: flex; flex-direction: column; }
         #previewCuerpoContainer { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-        .img-cuerpo-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
+        .preview-thumb { width: 70px; height: 70px; object-fit: cover; border-radius: 10px; border: 2px solid #6366f1; }
+        .drop-zone { border: 2px dashed #6366f1; padding: 25px; border-radius: 16px; background: rgba(240, 253, 244, 0.9); text-align: center; cursor: pointer; margin: 10px 0; font-size: 14px; color: #3730a3; font-weight: 600; }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index:1000; justify-content: center; align-items: center; }
+        .modal img { max-width: 90%; max-height: 90%; border-radius: 12px; }
+        .close-modal { position: absolute; top: 20px; right: 20px; color: white; font-size: 35px; cursor: pointer; }
+        
+        /* Ajuste para que las tarjetas tengan un fondo blanco limpio sobre la naturaleza */
+        .card { background: rgba(255, 255, 255, 0.96) !important; backdrop-filter: blur(8px); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
+<div class="container" style="max-width: 550px; margin: 0 auto; padding: 10px;">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 5px 10px 0 10px;">
+        <h2 style="font-weight: 800; font-size: 26px; color: #1e293b; margin: 0;">👨‍💻 Panel Master</h2>
+        <a href="index.html" style="text-decoration: none; background: #ef4444; color: white; padding: 10px 18px; border-radius: 14px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25); transition: transform 0.1s ease;">
+            🚪 Salir
+        </a>
+    </div>
+    
+    <div class="tabs-navegacion">
+        <button class="tab-btn active" onclick="cambiarPestaña('crear')">➕ Crear Cuento</button>
+        <button class="tab-btn" onclick="cambiarPestaña('ver')">📚 Historial</button>
+        <button class="tab-btn" onclick="cambiarPestaña('configuracion')">⚙️ Perfiles</button>
+    </div>
 
-    <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2>👨‍💻 Panel de Control de Papá</h2>
-            <a href="index.html" class="btn btn-logout">Cerrar Sesión 🚪</a>
-        </div>
-
-        <div class="tabs-navegacion">
-            <button class="tab-btn active" onclick="cambiarPestaña('crear')">➕ Subir Cuento</button>
-            <button class="tab-btn" onclick="cambiarPestaña('ver')">📊 Ver Cuentos e Historial</button>
-        </div>
-
-        <div id="seccionCrear" class="seccion-panel active">
+    <div id="seccionCrear" class="seccion-panel active">
+        <div class="card">
             <form id="cuentoForm">
-                <div class="form-group">
-                    <label for="titulo">Título del Cuento:</label>
-                    <input type="text" id="titulo" placeholder="Ej. El dragón que no sabía escupir fuego" required>
+                <label style="font-weight: 700; color: #475569;">Título del Cuento</label>
+                <input type="text" id="titulo" placeholder="Ej. El Dragón Relámpago" required>
+
+                <label style="font-weight: 700; color: #475569;">Fecha de Publicación</label>
+                <input type="date" id="fecha" required>
+
+                <label style="font-weight: 700; color: #475569;">Imagen de Portada</label>
+                <div class="drop-zone" id="dropZone">
+                    📸 Arrastra, pega (Ctrl+V) o toca aquí para la Portada
                 </div>
-                <div class="form-group">
-                    <label for="fecha">Fecha de Publicación:</label>
-                    <input type="date" id="fecha" required>
+                <input type="file" id="portada" accept="image/*" style="display: none;">
+                <div id="previewContainer" style="display:none; text-align:center; margin: 10px 0;">
+                    <img id="imgPreview" style="max-width:100%; max-height:180px; border-radius:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 </div>
-                <div class="form-group">
-                    <label for="destinatario">¿Para quién es este cuento?</label>
-                    <select id="destinatario">
-                        <option value="Ambos">👶👦 Para Ambos (Thommy y Alma)</option>
-                        <option value="Thommy">👦 Solo para Thommy</option>
-                        <option value="Alma">👶 Solo para Alma</option>
-                    </select>
-                </div>
+
+                <label style="font-weight: 700; color: #475569;">Cuerpo del Cuento</label>
+                <textarea id="contenido" placeholder="Había una vez..." rows="7" required></textarea>
+
+                <label style="font-weight: 700; color: #475569;">Ilustraciones para el cuerpo (Galería)</label>
+                <input type="file" id="fotosCuerpo" accept="image/*" multiple style="margin-top:5px;">
+                <div id="previewCuerpoContainer"></div>
+
+                <label style="font-weight: 700; color: #475569; margin-top: 15px; display:block;">¿Para quién es este cuento?</label>
+                <select id="destinatario">
+                    <option value="Ambos">👶👦 Para Ambos (Thommy y Alma)</option>
+                    <option value="Thommy">👦 Solo Thommy</option>
+                    <option value="Alma">👶 Solo Alma</option>
+                </select>
+
+                <h3 style="margin-top:25px; font-size:18px; color:#312e81; border-bottom:2px solid #e2e8f0; padding-bottom:8px;">❓ Cuestionario Final</h3>
                 
-                <div class="form-group">
-                    <label>Portada Principal del Cuento:</label>
-                    <div class="drop-zone" id="dropZone">
-                        <span style="color: #7f8c8d;">Pega la portada aquí o </span>
-                        <button type="button" id="triggerFile" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer;">Explorar</button>
-                        <input type="file" id="portada" accept="image/*" style="display: none;">
-                    </div>
-                    <div class="preview-container" id="previewContainer">
-                        <img id="imgPreview" src="" alt="Vista previa">
-                    </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:14px; font-weight:600;">Pregunta 1:</label>
+                    <input type="text" id="p1" placeholder="¿Qué fue lo que más te gustó?">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:14px; font-weight:600;">Pregunta 2:</label>
+                    <input type="text" id="p2" placeholder="¿Qué harías tú en su lugar?">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:14px; font-weight:600;">Pregunta 3:</label>
+                    <input type="text" id="p3" placeholder="Escribe otra pregunta...">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:14px; font-weight:600;">Pregunta 4:</label>
+                    <input type="text" id="p4" placeholder="Escribe otra pregunta...">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:14px; font-weight:600;">Pregunta 5:</label>
+                    <input type="text" id="p5" placeholder="Escribe otra pregunta...">
                 </div>
 
-                <div class="form-group">
-                    <label for="contenido">Cuerpo / Texto del Cuento:</label>
-                    <textarea id="contenido" placeholder="Escribe la historia aquí..." required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>Ilustraciones para el cuerpo del cuento:</label>
-                    <div class="drop-zone" id="dropZoneCuerpo" onclick="document.getElementById('fotosCuerpo').click()" style="border: 2px dashed #cbd5e1; padding: 20px; text-align: center; border-radius: 8px; cursor: pointer; background: #f8fafc; color: #64748b;">
-                        <span style="color: #7f8c8d;">Pega las fotos aquí con <b>Ctrl + V</b> o haz clic para </span>
-                        <button type="button" style="background:#3498db; color:white; border:none; padding:5px 10px; border-radius:3px; cursor:pointer; pointer-events: none;">Explorar</button>
-                        <input type="file" id="fotosCuerpo" accept="image/*" multiple style="display: none;">
-                    </div>
-                    <div id="previewCuerpoContainer"></div>
-                </div>
-
-                <div class="preguntas-section">
-                    <h4>❓ Preguntas del cuento</h4>
-                    <div class="form-group"><input type="text" id="p1" placeholder="Pregunta 1" required></div>
-                    <div class="form-group"><input type="text" id="p2" placeholder="Pregunta 2" required></div>
-                    <div class="form-group"><input type="text" id="p3" placeholder="Pregunta 3" required></div>
-                    <div class="form-group"><input type="text" id="p4" placeholder="Pregunta 4" required></div>
-                    <div class="form-group"><input type="text" id="p5" placeholder="Pregunta 5" required></div>
-                </div>
-                <button type="submit" class="btn btn-submit">🚀 Publicar e Ilustrar Cuento</button>
+                <button type="submit" class="btn-app" style="background: #6366f1;">🚀 Publicar Cuento Mágico</button>
             </form>
         </div>
+    </div>
 
-        <div id="seccionVer" class="seccion-panel">
-            <div class="filtros-historial">
-                <div class="filter-group">
-                    <label for="selectTituloPapa" style="font-size: 13px; margin-bottom: 4px;">Seleccionar Cuento:</label>
-                    <select id="selectTituloPapa"></select>
-                </div>
-                <div class="filter-group">
-                    <label for="filtrarDestinatario" style="font-size: 13px; margin-bottom: 4px;">Destinatario:</label>
-                    <select id="filtrarDestinatario">
-                        <option value="Todos">👁️ Ver Todos</option>
-                        <option value="Ambos">👶👦 Ambos</option>
-                        <option value="Thommy">👦 Thommy</option>
-                        <option value="Alma">👶 Alma</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label for="filtrarFechaPapa" style="font-size: 13px; margin-bottom: 4px;">Filtrar por Fecha:</label>
-                    <input type="date" id="filtrarFechaPapa">
-                </div>
+    <div id="seccionVer" class="seccion-panel">
+        <div class="filtros-historial">
+            <div class="filter-group">
+                <label style="font-size: 12px; font-weight: 700;">Seleccionar Cuento:</label>
+                <select id="selectTituloPapa"></select>
             </div>
-            <div id="historialContenedor"><p>Cargando registros...</p></div>
+            <div class="filter-group">
+                <label style="font-size: 12px; font-weight: 700;">Destinatario:</label>
+                <select id="filtrarDestinatario">
+                    <option value="Todos">👁️ Ver Todos</option>
+                    <option value="Ambos">👶👦 Ambos</option>
+                    <option value="Thommy">👦 Thommy</option>
+                    <option value="Alma">👶 Alma</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label style="font-size: 12px; font-weight: 700;">Filtrar Fecha:</label>
+                <input type="date" id="filtrarFechaPapa">
+            </div>
+        </div>
+        <div id="historialContenedor"><p style="text-align:center; color:#64748b;">Cargando registros...</p></div>
+    </div>
+
+    <div id="seccionConfiguracion" class="seccion-panel">
+        <div class="card">
+            <h3 style="margin-top:0; color:#1e293b;">🎨 Personalizar Hijos</h3>
+            <label style="font-weight: 700; color: #475569;">Selecciona el perfil:</label>
+            <select id="hijoSelect">
+                <option value="Thommy">👦 Thommy</option>
+                <option value="Alma">👶 Alma</option>
+            </select>
+
+            <label style="font-weight: 700; color: #475569; margin-top:10px; display:block;">Foto de Perfil (Avatar):</label>
+            <input type="file" id="fotoHijoInput" accept="image/*">
+
+            <label style="font-weight: 700; color: #475569; margin-top:10px; display:block;">Música de Fondo (MP3):</label>
+            <input type="file" id="musicaHijoInput" accept="audio/*">
+
+            <button class="btn-app" onclick="guardarConfigHijo()" style="background: #10b981;">💾 Guardar Perfil Custom</button>
         </div>
     </div>
+</div>
 
-    <div class="modal" id="imageModal">
-        <span class="close-modal" id="closeModal">&times;</span>
-        <img id="imgModalTarget" src="">
-    </div>
+<div class="modal" id="imageModal">
+    <span class="close-modal" id="closeModal">&times;</span>
+    <img id="imgModalTarget" src="">
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/conexion.js"></script>
-    <script src="js/papa.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/conexion.js"></script>
+<script src="js/papa.js"></script>
 </body>
 </html>
