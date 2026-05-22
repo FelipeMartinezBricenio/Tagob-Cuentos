@@ -9,7 +9,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const listaCatalogo = document.getElementById('listaCuentosCatalogo');
     const cuentoAbiertoContenedor = document.getElementById('cuentoAbiertoContenedor');
     const zonaFiltrosHijos = document.getElementById('zonaFiltrosHijos');
-    const cameraInput = document.getElementById('cameraInput');
     
     const buscarTituloHijo = document.getElementById('buscarTituloHijo');
     const buscarFechaHijo = document.getElementById('buscarFechaHijo');
@@ -19,7 +18,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let mediaRecorder = null;
     let audioChunks = [];
-    let preguntaActivaIndex = null;
     let todosLosCuentosHijo = [];
     let archivosTemporalesCuestionario = {};
     let audioFondoCuento = null;
@@ -108,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(buscarTituloHijo) buscarTituloHijo.addEventListener('input', aplicarFiltrosHijo);
     if(buscarFechaHijo) buscarFechaHijo.addEventListener('change', aplicarFiltrosHijo);
 
-    // CONTROL DE LECTURA ADAPTADO A CELULARES Y COMPUTADORAS
+    // CONTROL DE LECTURA ADAPTADO A REGLAS DE SEGURIDAD MÓVILES
     window.openLectorSeguro = window.abrirCuentoParaLeer = function(cuento) {
         if(!cuentoAbiertoContenedor || !listaCatalogo || !zonaFiltrosHijos) return;
 
@@ -123,13 +121,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         listaCatalogo.style.display = 'none';
         zonaFiltrosHijos.style.display = 'none';
 
-        const portadaHtml = cuento.imagen_url ? `<img class="cuento-banner-portada" src="${cuento.imagen_url}" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:15px;">` : '';
+        const portadaHtml = cuento.imagen_url ? `<img class="cuento-banner-portada" src="${cuento.imagen_url}">` : '';
         
         let galeriaHtml = '';
         if(cuento.imagenes_cuerpo && cuento.imagenes_cuerpo.length > 0) {
-            galeriaHtml = '<div class="galeria-cuerpo" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto;">';
+            galeriaHtml = '<div class="galeria-cuerpo">';
             cuento.imagenes_cuerpo.forEach(imgUrl => {
-                galeriaHtml += `<img src="${imgUrl}" onclick="abrirHijoModal('${imgUrl}', 'image')" style="width:80px; height:80px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid #e2e8f0;">`;
+                galeriaHtml += `<img src="${imgUrl}" onclick="abrirHijoModal('${imgUrl}', 'image')" style="cursor:pointer;">`;
             });
             galeriaHtml += '</div>';
         }
@@ -137,23 +135,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         let cuestionarioHtml = '';
         if(cuento.preguntas && Array.isArray(cuento.preguntas) && cuento.preguntas.length > 0) {
             cuestionarioHtml = `
-                <div class="cuestionario-caja" style="background:#f8fafc; padding:15px; border-radius:16px; border:1px solid #e2e8f0; margin-top:20px;">
+                <div class="cuestionario-caja">
                     <h3 style="margin-top:0; margin-bottom:15px; color:#1e293b; text-align:center; font-size:18px;">🌟 ¡Responde las preguntas de Papá!</h3>
             `;
 
             cuento.preguntas.forEach((preguntaTexto, idx) => {
                 cuestionarioHtml += `
-                    <div class="pregunta-item" data-index="${idx}" style="background:#ffffff; padding:12px; border-radius:12px; margin-bottom:15px; border:1px solid #edf2f7; text-align:left;">
-                        <p style="font-weight:bold; color:#1e293b; margin:0 0 10px 0; font-size:14px;">📌 Pregunta ${idx + 1}: ${preguntaTexto}</p>
+                    <div class="pregunta-item" data-index="${idx}" style="text-align:left;">
+                        <p>📌 Pregunta ${idx + 1}: ${preguntaTexto}</p>
                         
-                        <textarea class="respuesta-texto-hijo" data-index="${idx}" rows="2" placeholder="Escribe tu respuesta aquí..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; resize:none; margin-bottom:10px; font-size:14px;"></textarea>
+                        <textarea class="respuesta-texto-hijo" data-index="${idx}" rows="2" placeholder="Escribe tu respuesta aquí..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; resize:none; margin-bottom:10px; font-size:14px; box-sizing:border-box;"></textarea>
                         
                         <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:#f1f5f9; padding:8px; border-radius:8px;">
-                            <button type="button" class="btn-app" style="background:#0ea5e9; font-size:12px; padding:6px 10px; border-radius:6px; border:none; color:white; cursor:pointer;" onclick="activarCamaraHijo(${idx})">📸 Foto / Video</button>
+                            
+                            <label class="btn" style="background:#0ea5e9; color:white; font-size:12px; padding:6px 10px; border-radius:6px; cursor:pointer; display:inline-block; border:none; margin:0;">
+                                📸 Foto / Video
+                                <input type="file" accept="image/*,video/*" capture="environment" style="display:none;" onchange="procesarCamaraDirecta(this, ${idx})">
+                            </label>
                             
                             <div style="display:flex; gap:5px; align-items:center;">
-                                <button type="button" id="btn_grab_start_${idx}" class="btn-app" style="background:#e11d48; font-size:12px; padding:6px 10px; border-radius:6px; border:none; color:white; cursor:pointer;" onclick="iniciarGrabacionVoz(${idx})">🎙️ Voz</button>
-                                <button type="button" id="btn_grab_stop_${idx}" class="btn-app" style="background:#475569; font-size:12px; padding:6px 10px; border-radius:6px; border:none; color:white; display:none; cursor:pointer;" onclick="detenerGrabacionVoz(${idx})">🛑 Parar</button>
+                                <button type="button" id="btn_grab_start_${idx}" class="btn" style="background:#e11d48; color:white; font-size:12px; padding:6px 10px; border-radius:6px; border:none; cursor:pointer;" onclick="iniciarGrabacionVoz(${idx})">🎙️ Voz</button>
+                                <button type="button" id="btn_grab_stop_${idx}" class="btn" style="background:#475569; color:white; font-size:12px; padding:6px 10px; border-radius:6px; border:none; display:none; cursor:pointer;" onclick="detenerGrabacionVoz(${idx})">🛑 Parar</button>
                             </div>
                             <span id="status_grab_${idx}" style="font-size:11px; color:#64748b;">Sin adjuntos</span>
                         </div>
@@ -164,9 +166,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             });
 
-            // Almacenamos id y título de forma segura usando data-attributes para evitar errores de comillas en móvil
             cuestionarioHtml += `
-                    <button type="button" id="btnEnviarTodoElCuestionario" data-id="${cuento.id}" data-titulo="${cuento.titulo.replace(/"/g, '&quot;')}" class="btn-app" style="background:#10b981; font-size:16px; margin-top:15px; width:100%; padding:12px; border-radius:8px; color:white; border:none; font-weight:bold; cursor:pointer;">🚀 Guardar y Enviar a Papá</button>
+                    <button type="button" id="btnEnviarTodoElCuestionario" data-id="${cuento.id}" data-titulo="${cuento.titulo.replace(/"/g, '&quot;')}" class="btn" style="background:#10b981; color:white; font-size:16px; margin-top:15px; width:100%; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer;">🚀 Guardar y Enviar a Papá</button>
                 </div>
             `;
         } else {
@@ -174,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         cuentoAbiertoContenedor.innerHTML = `
-            <button type="button" class="btn-app btn-regresar" style="margin-bottom:15px; padding:8px 12px; border-radius:6px;" onclick="regresarAlCatalogo()">⬅ Volver al Catálogo</button>
+            <button type="button" class="btn btn-regresar" onclick="regresarAlCatalogo()">⬅ Volver al Catálogo</button>
             <h2 style="color:#1e293b; margin-bottom:15px; font-size:22px;">${cuento.titulo}</h2>
             ${portadaHtml}
             <div style="font-size:15px; line-height:1.6; color:#334155; white-space:pre-wrap; margin-bottom:20px; text-align:left;">${cuento.contenido}</div>
@@ -183,7 +184,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         cuentoAbiertoContenedor.style.display = 'block';
 
-        // EventListener asíncrono y seguro para evitar el bloqueo del motor JS móvil
         const btnEnviar = document.getElementById('btnEnviarTodoElCuestionario');
         if(btnEnviar) {
             btnEnviar.addEventListener('click', function() {
@@ -191,6 +191,39 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const tituloCuento = this.getAttribute('data-titulo');
                 window.enviarCuestionarioCompleto(idCuento, tituloCuento);
             });
+        }
+    }
+
+    // PROCESAMIENTO SEGURO DEL ARCHIVO MULTIMEDIA CAPTURADO
+    window.procesarCamaraDirecta = function(inputElement, index) {
+        const file = inputElement.files[0];
+        if(!file) return;
+
+        const esVideo = file.type.startsWith('video/');
+        const tipoMultimedia = esVideo ? 'video' : 'image';
+
+        archivosTemporalesCuestionario[index] = {
+            archivo: file,
+            tipo: tipoMultimedia
+        };
+
+        const divPreview = document.getElementById(`preview_multimedia_${index}`);
+        const statusGrab = document.getElementById(`status_grab_${index}`);
+        if(statusGrab) statusGrab.innerText = "✅ Archivo cargado";
+        
+        if(divPreview) {
+            const urlObj = URL.createObjectURL(file);
+            if(esVideo) {
+                divPreview.innerHTML = `
+                    <p style="color:#0284c7; font-size:12px; margin:5px 0 0 0;">🎥 Video listo:</p>
+                    <video src="${urlObj}" controls style="max-width:120px; max-height:100px; border-radius:6px; margin-top:5px;"></video>
+                `;
+            } else {
+                divPreview.innerHTML = `
+                    <p style="color:#0f766e; font-size:12px; margin:5px 0 0 0;">📸 Foto lista:</p>
+                    <img src="${urlObj}" style="width:70px; height:70px; object-fit:cover; border-radius:6px; margin-top:5px;">
+                `;
+            }
         }
     }
 
@@ -205,45 +238,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             zonaFiltrosHijos.style.display = 'block';
             archivosTemporalesCuestionario = {};
         }
-    }
-
-    window.activarCamaraHijo = function(index) {
-        preguntaActivaIndex = index;
-        if(cameraInput) cameraInput.click();
-    }
-
-    if(cameraInput) {
-        cameraInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if(!file || preguntaActivaIndex === null) return;
-
-            const esVideo = file.type.startsWith('video/');
-            const tipoMultimedia = esVideo ? 'video' : 'image';
-
-            archivosTemporalesCuestionario[preguntaActivaIndex] = {
-                archivo: file,
-                tipo: tipoMultimedia
-            };
-
-            const divPreview = document.getElementById(`preview_multimedia_${preguntaActivaIndex}`);
-            const statusGrab = document.getElementById(`status_grab_${preguntaActivaIndex}`);
-            if(statusGrab) statusGrab.innerText = "✅ Archivo cargado";
-            
-            if(divPreview) {
-                const urlObj = URL.createObjectURL(file);
-                if(esVideo) {
-                    divPreview.innerHTML = `
-                        <p style="color:#0284c7; font-size:12px; margin:5px 0 0 0;">🎥 Video listo:</p>
-                        <video src="${urlObj}" controls style="max-width:120px; max-height:100px; border-radius:6px; margin-top:5px CONTAINER;"></video>
-                    `;
-                } else {
-                    divPreview.innerHTML = `
-                        <p style="color:#0f766e; font-size:12px; margin:5px 0 0 0;">📸 Foto lista:</p>
-                        <img src="${urlObj}" style="width:70px; height:70px; object-fit:cover; border-radius:6px; margin-top:5px;">
-                    `;
-                }
-            }
-        });
     }
 
     window.iniciarGrabacionVoz = async function(index) {
@@ -287,7 +281,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // ENVIAR RESPUESTAS A LA TABLA respuestas_hijos
     window.enviarCuestionarioCompleto = async function(cuentoId, cuentoTitulo) {
         try {
             const itemsPreguntas = document.querySelectorAll('.pregunta-item');
@@ -341,6 +334,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // Lanzar la carga inicial
     cargarCuentosHijo();
 });
