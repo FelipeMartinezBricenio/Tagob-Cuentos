@@ -1,12 +1,12 @@
 // js/papa.js
 
-// Variables de estado globales para que todo el archivo tenga acceso
+// Variables de estado globales
 let todosLosCuentosGlobal = [];
 let archivoPortadaGlobal = null;
 let archivosCuerpoGlobal = []; 
 let contadorPreguntas = 0;
 
-// 1. FUNCIONES DE NAVEGACIÓN GLOBAL (Disponibles inmediatamente para los botones del HTML)
+// 1. FUNCIONES DE NAVEGACIÓN GLOBAL
 window.cambiarPestaña = function(destino) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.seccion-panel').forEach(panel => panel.classList.remove('active'));
@@ -22,7 +22,6 @@ window.cambiarPestaña = function(destino) {
         const secVer = document.getElementById('seccionVer');
         if (secVer) secVer.classList.add('active');
         
-        // Ejecuta la recarga del historial al pulsar la pestaña
         if (typeof window.cargarHistorialGlobal === 'function') {
             window.cargarHistorialGlobal();
         }
@@ -45,8 +44,7 @@ window.abrirModal = function(url) {
     }
 };
 
-
-// 2. LOGICA DE INICIALIZACIÓN CUANDO EL HTML ESTÁ LISTO
+// 2. INICIALIZACIÓN
 document.addEventListener('DOMContentLoaded', () => {
     let supabase = window.supabaseClient;
 
@@ -56,10 +54,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const fechaInput = document.getElementById('fecha');
-    if (fechaInput) {
-        fechaInput.value = new Date().toISOString().split('T')[0];
-    }
+    if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
 
+    // Configuración de elementos del DOM
     const portadaInput = document.getElementById('portada');
     const fotosCuerpoInput = document.getElementById('fotosCuerpo');
     const previewCuerpoContainer = document.getElementById('previewCuerpoContainer');
@@ -74,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const contenedorPreguntasDinamicas = document.getElementById('contenedorPreguntasDinamicas');
     const btnAgregarPregunta = document.getElementById('btnAgregarPregunta');
 
-    // Inicializar cuestionario dinámico básico
     if (btnAgregarPregunta && contenedorPreguntasDinamicas) {
         btnAgregarPregunta.addEventListener('click', () => agregarNuevaPregunta());
         agregarNuevaPregunta(); 
@@ -103,11 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 </select>
             </div>
             <div id="zona_opciones_${idPregunta}" style="display: none; background: white; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 10px;">
-                <label style="font-size: 12px; font-weight: bold; color: #4f46e5; display: block; margin-bottom: 5px;">Escribe las alternativas de respuesta:</label>
+                <label style="font-size: 12px; font-weight: bold; color: #4f46e5; display: block; margin-bottom: 5px;">Escribe las alternativas:</label>
                 <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa A" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
                 <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa B" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
                 <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa C" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
-                <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa D" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
             </div>
         `;
 
@@ -130,8 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let preguntasArr = [];
 
         bloques.forEach(bloque => {
-            const enunciadoInput = block => bloque.querySelector('.input-enunciado-pregunta');
-            const enunciado = enunciadoInput(bloque);
+            const enunciado = bloque.querySelector('.input-enunciado-pregunta');
             const tipoSelect = bloque.querySelector('.select-tipo-pregunta');
             
             if (enunciado && enunciado.value.trim() !== "") {
@@ -141,8 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (tipo === 'multiple') {
                     let opciones = [];
                     const idPregunta = tipoSelect.getAttribute('data-id');
-                    const inputsOpciones = bloque.querySelectorAll(`.opcion-item-${idPregunta}`);
-                    inputsOpciones.forEach(inp => {
+                    bloque.querySelectorAll(`.opcion-item-${idPregunta}`).forEach(inp => {
                         if (inp.value.trim() !== "") opciones.push(inp.value.trim());
                     });
                     objetoPregunta.opciones = opciones;
@@ -151,62 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         return preguntasArr;
-    }
-
-    // --- CARGA DE MULTIMEDIA INTERNA ---
-    if (dropZone && portadaInput) {
-        dropZone.addEventListener('click', () => portadaInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#dcfce7'; });
-        dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f0fdf4'; });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            if(e.dataTransfer.files.length > 0) procesarPortada(e.dataTransfer.files[0]);
-        });
-    }
-
-    window.addEventListener('paste', (e) => {
-        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-        for (let item of items) {
-            if (item.kind === 'file' && item.type.startsWith('image/')) {
-                procesarPortada(item.getAsFile());
-            }
-        }
-    });
-
-    if (portadaInput) {
-        portadaInput.addEventListener('change', (e) => {
-            if(e.target.files.length > 0) procesarPortada(e.target.files[0]);
-        });
-    }
-
-    function procesarPortada(file) {
-        archivoPortadaGlobal = file;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            if (imgPreview) imgPreview.src = event.target.result;
-            if (previewContainer) previewContainer.style.display = 'block';
-            if (dropZone) dropZone.innerText = "📸 ¡Portada cargada correctamente!";
-        };
-        reader.readAsDataURL(file);
-    }
-
-    if (fotosCuerpoInput) {
-        fotosCuerpoInput.addEventListener('change', (e) => {
-            archivosCuerpoGlobal = Array.from(e.target.files);
-            if (previewCuerpoContainer) {
-                previewCuerpoContainer.innerHTML = '';
-                archivosCuerpoGlobal.forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const img = document.createElement('img');
-                        img.src = event.target.result;
-                        img.className = 'preview-thumb';
-                        previewCuerpoContainer.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
-        });
     }
 
     // --- SUBIDA A SUPABASE ---
@@ -247,13 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 await client.from('cuentos').insert([payload]);
                 alert("🚀 ¡Cuento publicado!");
                 cuentoForm.reset();
-                if (previewContainer) previewContainer.style.display = 'none';
-                if (previewCuerpoContainer) previewCuerpoContainer.innerHTML = '';
-                if (contenedorPreguntasDinamicas) contenedorPreguntasDinamicas.innerHTML = '';
                 archivoPortadaGlobal = null; archivosCuerpoGlobal = []; contadorPreguntas = 0;
-                if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
                 agregarNuevaPregunta();
-
             } catch (error) {
                 alert("Error: " + error.message);
             } finally {
@@ -262,22 +194,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- LOGICA INTERNA DEL HISTORIAL ---
+    // --- CARGA HISTORIAL ---
     window.cargarHistorialGlobal = async function() {
         const contenedor = document.getElementById('historialContenedor');
         const client = obtenerClienteSupabase();
         if (!client || !contenedor) return;
 
         try {
-            const { data: cuentos, error: errC } = await client.from('cuentos').select('*').order('fecha_publicacion', { ascending: false });
-            if(errC) throw errC;
-            const { data: respuestas, error: errR } = await client.from('respuestas_hijos').select('*');
-            if(errR) throw errR;
-
+            const { data: cuentos } = await client.from('cuentos').select('*').order('fecha_publicacion', { ascending: false });
+            const { data: respuestas } = await client.from('respuestas_hijos').select('*');
             todosLosCuentosGlobal = cuentos || [];
             llenarFiltrosDeTitulos(todosLosCuentosGlobal);
             renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
-
         } catch (err) {
             contenedor.innerHTML = `<p style="color:red; padding:10px;">Error: ${err.message}</p>`;
         }
@@ -285,15 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function llenarFiltrosDeTitulos(cuentos) {
         if (!selectTituloPapa) return;
-        const opcionesPrevia = selectTituloPapa.value;
         selectTituloPapa.innerHTML = '<option value="Todos">👁️ Ver Todos los Cuentos</option>';
-        const titulosUnicos = [...new Set(cuentos.map(c => c.titulo))];
-        titulosUnicos.forEach(t => {
+        [...new Set(cuentos.map(c => c.titulo))].forEach(t => {
             const opt = document.createElement('option');
             opt.value = t; opt.innerText = t;
             selectTituloPapa.appendChild(opt);
         });
-        if(opcionesPrevia) selectTituloPapa.value = opcionesPrevia;
     }
 
     function renderizarHistorialFiltrado(cuentos, respuestas) {
@@ -301,120 +226,37 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!contenedor) return;
         contenedor.innerHTML = '';
 
-        const fTitulo = selectTituloPapa ? selectTituloPapa.value : 'Todos';
-        const fDest = filtrarDestinatario ? filtrarDestinatario.value : 'Todos';
-        const fFecha = filtrarFechaPapa ? filtrarFechaPapa.value : '';
+        const fTitulo = selectTituloPapa?.value || 'Todos';
+        const fDest = filtrarDestinatario?.value || 'Todos';
+        const fFecha = filtrarFechaPapa?.value || '';
 
-        let filtrados = cuentos.filter(c => {
-            if(fTitulo !== 'Todos' && c.titulo !== fTitulo) return false;
-            if(fDest !== 'Todos' && c.destinatario !== fDest) return false;
-            if(fFecha && c.fecha_publicacion !== fFecha) return false;
-            return true;
+        const filtrados = cuentos.filter(c => {
+            return (fTitulo === 'Todos' || c.titulo === fTitulo) &&
+                   (fDest === 'Todos' || c.destinatario === fDest) &&
+                   (!fFecha || c.fecha_publicacion === fFecha);
         });
 
-        if(filtrados.length === 0) {
-            contenedor.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;">No hay cuentos con esos filtros.</p>';
-            return;
-        }
-
         filtrados.forEach(c => {
-            const respuestasEsteCuento = respuestas.filter(r => r.cuento_id === c.id);
-            const tieneThommy = respuestasEsteCuento.some(r => r.lector === 'Thommy');
-            const tieneAlma = respuestasEsteCuento.some(r => r.lector === 'Alma');
-            
-            let checksHtml = "";
-            if(c.destinatario === 'Ambos' || c.destinatario === 'Thommy') checksHtml += `<span>👦 Thommy: ${tieneThommy ? '✅ Respondió':'❌ Pendiente'}</span> `;
-            if(c.destinatario === 'Ambos' || c.destinatario === 'Alma') checksHtml += `<span style="margin-left:10px;">👶 Alma: ${tieneAlma ? '✅ Respondió':'❌ Pendiente'}</span>`;
-
-            let miniGaleriaCuerpoHtml = "";
-            if (c.imagenes_cuerpo && c.imagenes_cuerpo.length > 0) {
-                miniGaleriaCuerpoHtml = `<div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto;">`;
-                c.imagenes_cuerpo.forEach(urlImg => {
-                    miniGaleriaCuerpoHtml += `<img src="${urlImg}" onclick="abrirModal('${urlImg}')" style="width:55px; height:55px; object-fit:cover; border-radius:8px; cursor:pointer;">`;
-                });
-                miniGaleriaCuerpoHtml += `</div>`;
-            }
-
-            let preguntasAgrupadasHtml = "";
-            if(c.preguntas && c.preguntas.length > 0) {
-                for(let idx = 0; idx < c.preguntas.length; idx++) {
-                    const preguntaObj = c.preguntas[idx];
-                    if(!preguntaObj) continue;
-
-                    const esObjeto = typeof preguntaObj === 'object' && preguntaObj !== null;
-                    const textoDeLaPregunta = esObjeto ? preguntaObj.texto : preguntaObj;
-                    const tipoDeLaPregunta = esObjeto ? (preguntaObj.tipo || 'tradicional') : 'tradicional';
-
-                    let detallesOpciones = "";
-                    if(tipoDeLaPregunta === 'multiple' && preguntaObj.opciones) {
-                        detallesOpciones = `<span style="display:block; font-size:11px; color:#6366f1;">[Opciones: ${preguntaObj.opciones.join(' | ')}]</span>`;
-                    }
-
-                    preguntasAgrupadasHtml += `<div style="margin-top:10px; background:#f8fafc; padding:10px; border-radius:10px; border-left:3px solid #6366f1;">
-                        <b style="font-size:13px;">P${idx+1}: ${textoDeLaPregunta}</b>
-                        ${detallesOpciones}`;
-                    
-                    const respuestasDeEstaP = respuestasEsteCuento.filter(r => r.pregunta_index === idx);
-                    if(respuestasDeEstaP.length === 0) {
-                        preguntasAgrupadasHtml += `<p style="font-size:12px; color:#94a3b8; margin:4px 0 0 0;">Nadie respondió aún.</p>`;
-                    } else {
-                        respuestasDeEstaP.forEach(resp => {
-                            let archivoHtml = "";
-                            if(resp.respuesta_archivo_url) {
-                                if(resp.tipo_archivo === 'audio') {
-                                    archivoHtml = `<br><audio controls src="${resp.respuesta_archivo_url}" style="height:32px; max-width:100%;"></audio>`;
-                                } else {
-                                    archivoHtml = `<br><img src="${resp.respuesta_archivo_url}" onclick="abrirModal('${resp.respuesta_archivo_url}')" style="max-width:100px; border-radius:8px;">`;
-                                }
-                            }
-                            preguntasAgrupadasHtml += `<p style="font-size:12px; margin:4px 0 0 0;">
-                                <b>${resp.lector}:</b> ${resp.respuesta_texto || '<i>[Sin texto]</i>'} ${archivoHtml}
-                            </p>`;
-                        });
-                    }
-                    preguntasAgrupadasHtml += `</div>`;
-                }
-            }
-
+            const res = respuestas.filter(r => r.cuento_id === c.id);
             const card = document.createElement('div');
             card.className = 'card';
-            card.style = "background: white; border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align:left;";
             card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleDetalleCuento('det-${c.id}')">
-                    <div>
-                        <h4 style="margin:0; font-size:16px; color:#1e293b;">${c.titulo}</h4>
-                        <small style="color:#64748b;">📅 ${c.fecha_publicacion} | 🎯 Destinatario: ${c.destinatario}</small>
-                        <div style="margin-top:6px; font-size:12px; color:#334155;">${checksHtml}</div>
-                    </div>
-                    <span id="flecha-det-${c.id}">▼</span>
+                <div style="cursor:pointer;" onclick="toggleDetalleCuento('det-${c.id}')">
+                    <h4>${c.titulo}</h4>
+                    <small>📅 ${c.fecha_publicacion} | 🎯 ${c.destinatario}</small>
                 </div>
-                <div id="det-${c.id}" style="display:none; margin-top:15px; border-top:1px dashed #e2e8f0; padding-top:15px;">
-                    ${c.imagen_url ? `<img src="${c.imagen_url}" onclick="abrirModal('${c.imagen_url}')" style="width:100%; max-height:140px; object-fit:cover; border-radius:12px; margin-bottom:10px;">` : ''}
-                    <div style="font-size:13px; white-space:pre-wrap; background:#f1f5f9; padding:10px; border-radius:12px; color:#334155;">
-                        ${c.contenido}
-                    </div>
-                    ${miniGaleriaCuerpoHtml}
-                    ${preguntasAgrupadasHtml}
+                <div id="det-${c.id}" style="display:none; margin-top:10px;">
+                    <p>${c.contenido}</p>
                 </div>
             `;
             contenedor.appendChild(card);
         });
     }
 
-    // Escuchadores de los select de filtrado
-    [selectTituloPapa, filtrarDestinatario, filtrarFechaPapa].forEach(elem => {
-        if (elem) {
-            elem.addEventListener('change', async () => {
-                const client = obtenerClienteSupabase();
-                if (!client) return;
-                const { data: respuestas } = await client.from('respuestas_hijos').select('*');
-                renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
-            });
-        }
+    // Inicialización de listeners
+    [selectTituloPapa, filtrarDestinatario, filtrarFechaPapa].forEach(el => {
+        el?.addEventListener('change', window.cargarHistorialGlobal);
     });
 
-    // Carga inicial automatica de datos en background
-    setTimeout(() => {
-        window.cargarHistorialGlobal();
-    }, 200);
+    setTimeout(window.cargarHistorialGlobal, 200);
 });

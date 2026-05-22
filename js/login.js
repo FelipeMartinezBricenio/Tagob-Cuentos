@@ -1,10 +1,10 @@
 // js/login.js
 
-// Configuración Maestra de Credenciales, Destinos y Audios de Bienvenida
+// Configuración Maestra de Credenciales y Destinos de Redirección
 const CONFIG_PERFILES = {
-    "Papá":   { pin: "0203", url: "papa.html", audio: "audios/papa.mp3" },
-    "Thommy": { pin: "0208", url: "hijos.html?usuario=Thommy", audio: "audios/thommy.mp3" },
-    "Alma":   { pin: "1111", url: "hijos.html?usuario=Alma", audio: "audios/alma.mp3" }
+    "Papá":   { pin: "0203", url: "papa.html" },
+    "Thommy": { pin: "0208", url: "hijos.html?usuario=Thommy" },
+    "Alma":   { pin: "1111", url: "hijos.html?usuario=Alma" }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,27 +24,8 @@ window.abrirLoginPIN = function(usuario) {
 
     // Validación de la clave
     if (pinIngresado === datosUser.pin) {
-        
-        // Intentar reproducir el audio de bienvenida
-        const sonidoBienvenida = new Audio(datosUser.audio);
-        
-        sonidoBienvenida.play().then(() => {
-            // Avanza de página cuando el audio termina por completo
-            sonidoBienvenida.onended = () => {
-                window.location.href = datosUser.url;
-            };
-            
-            // Seguro por si el audio es muy largo, avanza máximo a los 3.5 segundos
-            setTimeout(() => {
-                window.location.href = datosUser.url;
-            }, 3500);
-
-        }).catch((error) => {
-            // Si el navegador bloquea el auto-play del audio por seguridad móvil, avanza directo
-            console.log("Audio omitido por restricciones de privacidad del navegador.");
-            window.location.href = datosUser.url;
-        });
-
+        // Redirección INSTANTÁNEA a la vista correspondiente
+        window.location.href = datosUser.url;
     } else {
         alert(`❌ PIN incorrecto para ${usuario}. Intenta de nuevo.`);
     }

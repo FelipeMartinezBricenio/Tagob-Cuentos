@@ -3,6 +3,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const lector = params.get('usuario') || 'Hijo';
     
+    // =========================================================================
+    // MODIFICACIÓN: REPRODUCCIÓN AUTOMÁTICA DEL AUDIO DE BIENVENIDA DE FONDO
+    // =========================================================================
+    if (lector && lector !== 'Hijo') {
+        const audioBienvenida = new Audio(`audios/${lector.toLowerCase()}.mp3`);
+        
+        // Se ejecuta en background para no interrumpir ni congelar la carga visual
+        audioBienvenida.play().catch(error => {
+            console.log("El navegador móvil postergó el audio hasta la primera interacción del niño con la pantalla.", error);
+        });
+    }
+    // =========================================================================
+
     const saludo = document.getElementById('saludoHijo');
     if (saludo) saludo.innerText = `📖 ¡Hola ${lector}, listos para leer! ✨`;
 
