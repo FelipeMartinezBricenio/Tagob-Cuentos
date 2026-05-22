@@ -7,14 +7,50 @@ const CONFIG_PERFILES = {
     "Alma":   { pin: "1111", url: "hijos.html?usuario=Alma", audio: "audios/alma.mp3" }
 };
 
-let usuarioSeleccionado = "";
-let pinAcumulado = "";
-
 document.addEventListener('DOMContentLoaded', () => {
     verificarFotosPersonalizadas();
 });
 
-// Función de respaldo para fotos de Supabase
+// FUNCIÓN PRINCIPAL: Abre la ventana nativa clásica para escribir la clave
+window.abrirLoginPIN = function(usuario) {
+    const datosUser = CONFIG_PERFILES[usuario];
+    if (!datosUser) return;
+
+    // Abre el prompt nativo del sistema
+    const pinIngresado = prompt(`🔑 Ingresa el PIN de acceso para ${usuario}:`);
+
+    // Si el usuario cancela o lo deja vacío, no hace nada
+    if (pinIngresado === null) return;
+
+    // Validación de la clave
+    if (pinIngresado === datosUser.pin) {
+        
+        // Intentar reproducir el audio de bienvenida
+        const sonidoBienvenida = new Audio(datosUser.audio);
+        
+        sonidoBienvenida.play().then(() => {
+            // Avanza de página cuando el audio termina por completo
+            sonidoBienvenida.onended = () => {
+                window.location.href = datosUser.url;
+            };
+            
+            // Seguro por si el audio es muy largo, avanza máximo a los 3.5 segundos
+            setTimeout(() => {
+                window.location.href = datosUser.url;
+            }, 3500);
+
+        }).catch((error) => {
+            // Si el navegador bloquea el auto-play del audio por seguridad móvil, avanza directo
+            console.log("Audio omitido por restricciones de privacidad del navegador.");
+            window.location.href = datosUser.url;
+        });
+
+    } else {
+        alert(`❌ PIN incorrecto para ${usuario}. Intenta de nuevo.`);
+    }
+};
+
+// Función opcional de respaldo para fotos de Supabase
 async function verificarFotosPersonalizadas() {
     const supabase = window.supabaseClient;
     if (!supabase) return;
@@ -33,87 +69,5 @@ async function verificarFotosPersonalizadas() {
         }
     } catch (err) {
         console.log("Usando las imágenes predeterminadas de la carpeta local.");
-    }
-}
-
-// CONTROL DEL MODAL DE ACCESO TÁCTIL
-window.abrirLoginPIN = function(usuario) {
-    usuarioSeleccionado = usuario;
-    pinAcumulado = "";
-    document.getElementById('nombreUsuarioCambiante').innerText = usuario;
-    actualizarPuntosVisuales();
-    document.getElementById('modalPin').style.display = 'flex';
-};
-
-window.cerrarModalPin = function() {
-    document.getElementById('modalPin').style.display = 'none';
-    pinAcumulado = "";
-};
-
-window.presionarNumero = function(num) {
-    if (pinAcumulado.length < 4) {
-        pinAcumulado += num;
-        actualizarPuntosVisuales();
-        
-        if (pinAcumulado.length === 4) {
-            setTimeout(verificarPIN, 200);
-        }
-    }
-};
-
-window.borrarUltimo = function() {
-    if (pinAcumulado.length > 0) {
-        pinAcumulado = pinAcumulado.slice(0, -1);
-        actualizarPuntosVisuales();
-    }
-};
-
-function actualizarPuntosVisuales() {
-    for (let i = 0; i < 4; i++) {
-        const punto = document.getElementById(`p${i}`);
-        if (punto) {
-            if (i < pinAcumulado.length) {
-                punto.classList.add('activo');
-            } else {
-                punto.classList.remove('activo');
-            }
-        }
-    }
-}
-
-// COMPARADOR DE SEGURIDAD CON REPRODUCTOR DE AUDIO
-function verificarPIN() {
-    const datosUser = CONFIG_PERFILES[usuarioSeleccionado];
-    
-    if (datosUser && pinAcumulado === datosUser.pin) {
-        // Ocultamos el teclado y avisamos que está ingresando
-        document.getElementById('modalTitulo').innerText = "✨ ¡PIN Correcto! ✨";
-        
-        // Creamos el objeto de audio nativo apuntando a tu nueva carpeta
-        const sonidoBienvenida = new Audio(datosUser.audio);
-        
-        // Intentamos reproducir el sonido
-        sonidoBienvenida.play().then(() => {
-            // Cuando el audio termine por completo, avanza de página automáticamente
-            sonidoBienvenida.onended = () => {
-                window.location.href = datosUser.url;
-            };
-            
-            // Seguridad por si el audio dura demasiado (ej. más de 4 segundos), 
-            // avanza de todos modos para que no se cansen de esperar.
-            setTimeout(() => {
-                window.location.href = datosUser.url;
-            }, 4000);
-
-        }).catch((error) => {
-            // Si el navegador bloquea el audio por alguna restricción móvil, avanza sin trabarse
-            console.log("El audio no pudo reproducirse, redirigiendo de inmediato...", error);
-            window.location.href = datosUser.url;
-        });
-
-    } else {
-        alert("❌ PIN incorrecto para " + usuarioSeleccionado + ". Intenta de nuevo.");
-        pinAcumulado = "";
-        actualizarPuntosVisuales();
     }
 }
