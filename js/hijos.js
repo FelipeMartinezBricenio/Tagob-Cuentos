@@ -48,14 +48,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // CARGAR CUENTOS DESDE SUPABASE
+    // CARGAR CUENTOS DESDE SUPABASE (Adaptado a las columnas y destinatarios reales)
     async function cargarCuentosHijo() {
         try {
             const { data, error } = await window.supabaseClient
                 .from('cuentos')
                 .select('*')
-                .or(`destinatario.eq.Todos,destinatario.eq.${lector}`)
-                .order('fecha_creacion', { ascending: false });
+                .or(`destinatario.eq.Ambos,destinatario.eq.${lector}`) // Cambiado de 'Todos' a 'Ambos'
+                .order('fecha_publicacion', { ascending: false });    // Cambiado de 'fecha_creacion' a 'fecha_publicacion'
 
             if(error) throw error;
             todosLosCuentosHijo = data || [];
@@ -78,13 +78,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             item.className = 'cuento-item-lista';
             item.onclick = () => abrirCuentoParaLeer(cuento);
 
-            const portada = cuento.portada_url || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=150';
+            // CORRECCIÓN: Se cambió 'portada_url' por 'imagen_url' que viene de la BD
+            const portada = cuento.imagen_url || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=150';
             
             item.innerHTML = `
                 <img src="${portada}" alt="Portada">
                 <div class="info">
                     <h4>${cuento.titulo}</h4>
-                    <p>📅 Creado: ${cuento.fecha_creacion}</p>
+                    <p>📅 Creado: ${cuento.fecha_publicacion || cuento.fecha_creacion}</p>
                 </div>
                 <div style="font-size:20px;">👉</div>
             `;
@@ -98,7 +99,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const filtrados = todosLosCuentosHijo.filter(cuento => {
             const coincideTxt = cuento.titulo.toLowerCase().includes(txt);
-            const coincideFch = fch ? (cuento.fecha_creacion === fch) : true;
+            const fechaCuento = cuento.fecha_publicacion || cuento.fecha_creacion;
+            const coincideFch = fch ? (fechaCuento === fch) : true;
             return coincideTxt && coincideFch;
         });
         renderizarCatalogoHijo(filtrados);
@@ -121,63 +123,63 @@ document.addEventListener('DOMContentLoaded', async () => {
         listaCatalogo.style.display = 'none';
         zonaFiltrosHijos.style.display = 'none';
 
-        const portadaHtml = cuento.portada_url ? `<img class="cuento-banner-portada" src="${cuento.portada_url}">` : '';
+        // CORRECCIÓN: 'imagen_url' es la propiedad real de la portada
+        const portadaHtml = cuento.imagen_url ? `<img class="cuento-banner-portada" src="${cuento.imagen_url}" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:15px;">` : '';
         
         let galeriaHtml = '';
         if(cuento.imagenes_cuerpo && cuento.imagenes_cuerpo.length > 0) {
-            galeriaHtml = '<div class="galeria-cuerpo">';
+            galeriaHtml = '<div class="galeria-cuerpo" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto;">';
             cuento.imagenes_cuerpo.forEach(imgUrl => {
-                galeriaHtml += `<img src="${imgUrl}" onclick="abrirHijoModal('${imgUrl}', 'image')" style="cursor:pointer;">`;
+                galeriaHtml += `<img src="${imgUrl}" onclick="abrirHijoModal('${imgUrl}', 'image')" style="width:80px; height:80px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid #e2e8f0;">`;
             });
             galeriaHtml += '</div>';
         }
 
+        // CORRECCIÓN CENTRAL: Adaptar la lectura del array dinámico de preguntas de Papá
         let cuestionarioHtml = '';
-        if(cuento.cuestionario && cuento.cuestionario.length > 0) {
+        if(cuento.preguntas && Array.isArray(cuento.preguntas) && cuento.preguntas.length > 0) {
             cuestionarioHtml = `
-                <div class="cuestionario-caja">
+                <div class="cuestionario-caja" style="background:#f8fafc; padding:20px; border-radius:16px; border:1px solid #e2e8f0; margin-top:20px;">
                     <h3 style="margin-top:0; margin-bottom:15px; color:#1e293b; text-align:center;">🌟 ¡Responde las preguntas de Papá!</h3>
             `;
 
-            cuento.cuestionario.forEach(q => {
-                let inputAccionHtml = '';
-                if(q.tipo === 'texto') {
-                    inputAccionHtml = `<textarea class="respuesta-texto-hijo" data-index="${q.index}" rows="3" placeholder="Escribe tu respuesta aquí con calma..."></textarea>`;
-                } else if(q.tipo === 'multimedia') {
-                    inputAccionHtml = `
-                        <button type="button" class="btn-app" style="background:#0ea5e9; font-size:14px;" onclick="activarCamaraHijo(${q.index})">📸 Grabar Video o Foto</button>
-                        <div id="preview_multimedia_${q.index}" style="margin-top:10px; font-weight:bold; color:#0f766e;"></div>
-                    `;
-                } else if(q.tipo === 'audio') {
-                    inputAccionHtml = `
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <button type="button" id="btn_grab_start_${q.index}" class="btn-app" style="background:#e11d48; padding:10px;" onclick="iniciarGrabacionVoz(${q.index})">🎙 Grabar</button>
-                            <button type="button" id="btn_grab_stop_${q.index}" class="btn-app" style="background:#475569; padding:10px; display:none;" onclick="detenerGrabacionVoz(${q.index})">🛑 Parar</button>
-                            <span id="status_grab_${q.index}" style="font-size:13px; color:#64748b;">Sin grabar</span>
-                        </div>
-                        <div id="preview_audio_${q.index}" style="margin-top:10px;"></div>
-                    `;
-                }
-
+            cuento.preguntas.forEach((preguntaTexto, idx) => {
+                // Inyectamos inputs de texto y controles multimedia por cada pregunta para que elijan cómo responder
                 cuestionarioHtml += `
-                    <div class="pregunta-item" data-tipo="${q.tipo}">
-                        <p>Pregunta ${q.index}: ${q.pregunta}</p>
-                        ${inputAccionHtml}
+                    <div class="pregunta-item" data-index="${idx}" style="background:#ffffff; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #edf2f7; text-align:left;">
+                        <p style="font-weight:bold; color:#1e293b; margin:0 0 10px 0;">📌 Pregunta ${idx + 1}: ${preguntaTexto}</p>
+                        
+                        <textarea class="respuesta-texto-hijo" data-index="${idx}" rows="2" placeholder="Escribe tu respuesta aquí..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; resize:none; margin-bottom:10px;"></textarea>
+                        
+                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:#f1f5f9; padding:8px; border-radius:8px;">
+                            <button type="button" class="btn-app" style="background:#0ea5e9; font-size:12px; padding:6px 12px;" onclick="activarCamaraHijo(${idx})">📸 Foto / Video</button>
+                            
+                            <div style="display:flex; gap:5px; align-items:center;">
+                                <button type="button" id="btn_grab_start_${idx}" class="btn-app" style="background:#e11d48; font-size:12px; padding:6px 12px;" onclick="iniciarGrabacionVoz(${idx})">🎙️ Grabar Voz</button>
+                                <button type="button" id="btn_grab_stop_${idx}" class="btn-app" style="background:#475569; font-size:12px; padding:6px 12px; display:none;" onclick="detenerGrabacionVoz(${idx})">🛑 Parar</button>
+                            </div>
+                            <span id="status_grab_${idx}" style="font-size:12px; color:#64748b;">Sin archivos adjuntos</span>
+                        </div>
+                        
+                        <div id="preview_multimedia_${idx}" style="margin-top:8px;"></div>
+                        <div id="preview_audio_${idx}" style="margin-top:8px;"></div>
                     </div>
                 `;
             });
 
             cuestionarioHtml += `
-                    <button type="button" class="btn-app" style="background:#10b981; font-size:16px; margin-top:15px;" onclick="enviarCuestionarioCompleto(${cuento.id})">🚀 Guardar y Enviar a Papá</button>
+                    <button type="button" class="btn-app" style="background:#10b981; font-size:16px; margin-top:15px; width:100%; cursor:pointer;" onclick="enviarCuestionarioCompleto(${cuento.id}, '${cuento.titulo.replace(/'/g, "\\'")}')">🚀 Guardar y Enviar a Papá</button>
                 </div>
             `;
+        } else {
+            cuestionarioHtml = '<p style="color:#64748b; font-style:italic; text-align:center; padding:15px; background:#f1f5f9; border-radius:12px; margin-top:20px;">¡Este cuento es para disfrutar la lectura! No tiene preguntas asignadas. 📖✨</p>';
         }
 
         cuentoAbiertoContenedor.innerHTML = `
-            <button type="button" class="btn-app btn-regresar" onclick="regresarAlCatalogo()">⬅ Volver al Catálogo</button>
+            <button type="button" class="btn-app btn-regresar" style="margin-bottom:15px;" onclick="regresarAlCatalogo()">⬅ Volver al Catálogo</button>
             <h2 style="color:#1e293b; margin-bottom:15px;">${cuento.titulo}</h2>
             ${portadaHtml}
-            <div style="font-size:16px; line-height:1.7; color:#334155; white-space:pre-wrap; margin-bottom:20px;">${cuento.contenido}</div>
+            <div style="font-size:16px; line-height:1.7; color:#334155; white-space:pre-wrap; margin-bottom:20px; text-align:left;">${cuento.contenido}</div>
             ${galeriaHtml}
             ${cuestionarioHtml}
         `;
@@ -216,16 +218,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             const divPreview = document.getElementById(`preview_multimedia_${preguntaActivaIndex}`);
+            const statusGrab = document.getElementById(`status_grab_${preguntaActivaIndex}`);
+            if(statusGrab) statusGrab.innerText = "✅ Archivo cargado";
+            
             if(divPreview) {
                 const urlObj = URL.createObjectURL(file);
                 if(esVideo) {
                     divPreview.innerHTML = `
-                        <p style="color:#0284c7;">🎥 Video cargado listo:</p>
-                        <video src="${urlObj}" controls style="max-width:100px; max-height:100px; border-radius:6px; margin-top:5px;"></video>
+                        <p style="color:#0284c7; font-size:12px; margin:5px 0 0 0;">🎥 Video listo:</p>
+                        <video src="${urlObj}" controls style="max-width:120px; max-height:100px; border-radius:6px; margin-top:5px;"></video>
                     `;
                 } else {
                     divPreview.innerHTML = `
-                        <p style="color:#0f766e;">📸 Foto cargada lista:</p>
+                        <p style="color:#0f766e; font-size:12px; margin:5px 0 0 0;">📸 Foto lista:</p>
                         <img src="${urlObj}" style="width:70px; height:70px; object-fit:cover; border-radius:6px; margin-top:5px;">
                     `;
                 }
@@ -251,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const previewDiv = document.getElementById(`preview_audio_${index}`);
                 if(previewDiv) {
                     const audioUrl = URL.createObjectURL(audioBlob);
-                    previewDiv.innerHTML = `<audio controls src="${audioUrl}" style="width:100%; max-width:240px;"></audio>`;
+                    previewDiv.innerHTML = `<audio controls src="${audioUrl}" style="width:100%; max-width:240px; margin-top:5px; height:32px;"></audio>`;
                 }
                 
                 const status = document.getElementById(`status_grab_${index}`);
@@ -274,36 +279,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    window.enviarCuestionarioCompleto = async function(cuentoId) {
+    // ENVIAR RESPUESTAS A LA TABLA respuestas_hijos
+    window.enviarCuestionarioCompleto = async function(cuentoId, cuentoTitulo) {
         try {
             const itemsPreguntas = document.querySelectorAll('.pregunta-item');
             
             for(let itemNodo of itemsPreguntas) {
-                const tipo = itemNodo.getAttribute('data-tipo');
-                let textoRespuesta = null;
-                let itemIndex = null;
-                let fileObj = null;
-
-                if(tipo === 'texto') {
-                    const textEl = itemNodo.querySelector('.respuesta-texto-hijo');
-                    textoRespuesta = textEl.value.trim();
-                    itemIndex = parseInt(textEl.getAttribute('data-index'));
-                } else {
-                    if(tipo === 'multimedia') {
-                        const btn = itemNodo.querySelector('button');
-                        const onclickStr = btn.getAttribute('onclick');
-                        itemIndex = parseInt(onclickStr.match(/\d+/)[0]);
-                    } else if(tipo === 'audio') {
-                        const btn = itemNodo.querySelector('button');
-                        const idStr = btn.id;
-                        itemIndex = parseInt(idStr.split('_').pop());
-                    }
-                    fileObj = archivosTemporalesCuestionario[itemIndex];
-                }
+                const itemIndex = parseInt(itemNodo.getAttribute('data-index'));
+                const textEl = itemNodo.querySelector('.respuesta-texto-hijo');
+                const textoRespuesta = textEl ? textEl.value.trim() : "";
+                const fileObj = archivosTemporalesCuestionario[itemIndex];
 
                 let urlPublica = null;
                 let tipoArchivoFinal = null;
 
+                // Si el niño adjuntó audio/foto/video se sube al bucket validado 'respuestas-hijos'
                 if(fileObj && fileObj.archivo) {
                     tipoArchivoFinal = fileObj.tipo;
                     const extension = tipoArchivoFinal === 'audio' ? 'mp3' : (tipoArchivoFinal === 'video' ? 'mp4' : 'png');
@@ -319,15 +309,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                     urlPublica = data.publicUrl;
                 }
 
+                // Inserción limpia con las columnas correctas en respuestas_hijos
                 const { error: insertError } = await window.supabaseClient
                     .from('respuestas_hijos')
                     .insert([{
                         cuento_id: cuentoId,
+                        cuento_titulo: cuentoTitulo,
                         lector: lector,
                         pregunta_index: itemIndex,
-                        respuesta_texto: textoRespuesta,
+                        respuesta_texto: textoRespuesta || null,
                         respuesta_archivo_url: urlPublica,
-                        tipo_archivo: tipoArchivoFinal
+                        tipo_archivo: tipoArchivoFinal,
+                        fecha_respuesta: new Date().toISOString().split('T')[0]
                     }]);
 
                 if (insertError) throw insertError;
@@ -335,11 +328,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             alert("¡Todo tu cuestionario ha sido guardado y enviado a Papá con éxito! 🌟👏");
             regresarAlCatalogo();
+            cargarCuentosHijo();
 
         } catch (err) {
-            alert("Error de supabase al guardar: " + err.message);
+            alert("Error de supabase al guardar tus respuestas: " + err.message);
         }
     };
 
+    // Lanzar la carga inicial
     cargarCuentosHijo();
 });
