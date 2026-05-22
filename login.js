@@ -9,84 +9,104 @@ const CONFIG_PERFILES = {
 
 let usuarioSeleccionado = "";
 let pinAcumulado = "";
+let inputOcultoCelular = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     verificarFotosPersonalizadas();
-    asignarEventosTactilesTarjetas();
+    crearInputNumericoNativo();
 });
 
-// NUEVA FUNCIÓN: Asegura que en celulares el toque del dedo abra el modal al instante
-function asignartEventosTactilesTarjetas() {
-    // Buscamos todas las tarjetas de usuario configuradas
-    Object.keys(CONFIG_PERFILES).forEach(nombre => {
-        // Buscamos el contenedor o tarjeta que tenga el texto o ID del usuario
-        // Nota: Si tus tarjetas en el HTML tienen un ID específico como "tarjeta-Thommy", puedes usarlo aquí.
-        const tarjeta = document.getElementById(`tarjeta-${nombre}`) || document.querySelector(`[onclick*="${nombre}"]`);
+// NUEVA FUNCIÓN: Crea un input invisible configurado para activar el teclado numérico del celular
+function crearInputNumericoNativo() {
+    inputOcultoCelular = document.createElement('input');
+    
+    // Estos atributos obligan al celular a abrir SOLO el teclado de números grandes
+    inputOcultoCelular.type = 'text';
+    inputOcultoCelular.inputMode = 'numeric';
+    inputOcultoCelular.pattern = '[0-3]*';
+    
+    // Estilos para que no se vea en la pantalla pero siga operativo
+    inputOcultoCelular.style.position = 'fixed';
+    inputOcultoCelular.style.top = '-100px';
+    inputOcultoCelular.style.left = '-100px';
+    inputOcultoCelular.style.opacity = '0';
+    inputOcultoCelular.style.zIndex = '-1';
+    
+    document.body.appendChild(inputOcultoCelular);
+
+    // Escuchamos lo que se escribe en el teclado del celular
+    inputOcultoCelular.addEventListener('input', (e) => {
+        const valor = e.target.value;
         
-        if (tarjeta) {
-            // Escuchamos el toque del dedo en móviles para que no se congele
-            tarjeta.addEventListener('touchstart', (e) => {
-                // Evita que se duplique el evento si el celular detecta touch y click al mismo tiempo
-                e.preventDefault(); 
-                window.abrirLoginPIN(nombre);
-            }, { passive: false });
+        // Si el usuario borró caracteres con la tecla de retroceso
+        if (valor.length < pinAcumulado.length) {
+            pinAcumulado = valor;
+            actualizarPuntosVisuales();
+            return;
         }
+
+        // Si introdujo un número, capturamos el último dígito
+        if (valor.length > 0 && pinAcumulado.length < 4) {
+            const ultimoDigito = valor.charAt(valor.length - 1);
+            
+            // Validamos que sea un número real
+            if (/^[0-9]$/.test(ultimoDigito)) {
+                pinAcumulado += ultimoDigito;
+                actualizarPuntosVisuales();
+                
+                if (pinAcumulado.length === 4) {
+                    // Quitamos el teclado de la pantalla cerrando el enfoque
+                    inputOcultoCelular.blur();
+                    setTimeout(verificarPIN, 200);
+                }
+            }
+        }
+        
+        // Sincronizamos el input para evitar que se llene de texto infinito
+        inputOcultoCelular.value = pinAcumulado;
     });
 }
 
-// Función de respaldo para fotos de Supabase
-async function verificarFotosPersonalizadas() {
-    const supabase = window.supabaseClient;
-    if (!supabase) return;
-
-    try {
-        const { data: perfiles, error } = await supabase.from('perfiles').select('nombre, foto_url');
-        if (error) throw error;
-
-        if (perfiles && perfiles.length > 0) {
-            perfiles.forEach(p => {
-                const contenedor = document.getElementById(`foto-${p.nombre}`);
-                if (contenedor && p.foto_url) {
-                    contenedor.innerHTML = `<img src="${p.foto_url}" alt="${p.nombre}">`;
-                }
-            });
-        }
-    } catch (err) {
-        console.log("Usando las imágenes predeterminadas de la carpeta local.");
-    }
-}
-
-// CONTROL DEL MODAL DE ACCESO TÁCTIL (Optimizado para verse en celulares)
+// CONTROL DEL MODAL DE ACCESO
 window.abrirLoginPIN = function(usuario) {
     usuarioSeleccionado = usuario;
     pinAcumulado = "";
+    
+    if (inputOcultoCelular) {
+        inputOcultoCelular.value = "";
+    }
     
     const txtNombre = document.getElementById('nombreUsuarioCambiante');
     const modal = document.getElementById('modalPin');
     
     if (txtNombre) txtNombre.innerText = usuario;
-    
     if (modal) {
-        // Forzamos a que el modal se muestre arriba de todo en la pantalla del celular
         modal.style.display = 'flex';
-        modal.style.zIndex = '99999'; 
-        
-        // Desplazar la pantalla hacia arriba automáticamente para que el teclado no quede cortado abajo
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        modal.style.zIndex = '99999';
     }
     
     actualizarPuntosVisuales();
+
+    // LEVANTAR TECLADO CELULAR: Forzamos el enfoque inmediato al input numérico oculto
+    if (inputOcultoCelular) {
+        setTimeout(() => {
+            inputOcultoCelular.focus();
+        }, 100);
+    }
 };
 
 window.cerrarModalPin = function() {
     const modal = document.getElementById('modalPin');
     if (modal) modal.style.display = 'none';
     pinAcumulado = "";
+    if (inputOcultoCelular) inputOcultoCelular.blur();
 };
 
+// Mantenemos estas funciones por si usas la PC y das clics con el mouse en los botones de diseño celular
 window.presionarNumero = function(num) {
     if (pinAcumulado.length < 4) {
         pinAcumulado += num;
+        if (inputOcultoCelular) inputOcultoCelular.value = pinAcumulado;
         actualizarPuntosVisuales();
         
         if (pinAcumulado.length === 4) {
@@ -98,6 +118,7 @@ window.presionarNumero = function(num) {
 window.borrarUltimo = function() {
     if (pinAcumulado.length > 0) {
         pinAcumulado = pinAcumulado.slice(0, -1);
+        if (inputOcultoCelular) inputOcultoCelular.value = pinAcumulado;
         actualizarPuntosVisuales();
     }
 };
@@ -130,20 +151,44 @@ function verificarPIN() {
                 window.location.href = datosUser.url;
             };
             
-            // Si el audio es largo, avanza a los 3.5 segundos máximo
             setTimeout(() => {
                 window.location.href = datosUser.url;
             }, 3500);
 
         }).catch((error) => {
-            // Si el móvil bloquea el auto-play de audio por seguridad, redirige de inmediato
-            console.log("Audio bloqueado por el navegador móvil, redirigiendo...", error);
+            console.log("Audio omitido por restricciones del navegador, redirigiendo...", error);
             window.location.href = datosUser.url;
         });
 
     } else {
         alert("❌ PIN incorrecto para " + usuarioSeleccionado + ". Intenta de nuevo.");
         pinAcumulado = "";
+        if (inputOcultoCelular) inputOcultoCelular.value = "";
         actualizarPuntosVisuales();
+        
+        // Reabre el teclado si fallan la contraseña
+        if (inputOcultoCelular) inputOcultoCelular.focus();
+    }
+}
+
+// Función de respaldo para fotos de Supabase
+async function verificarFotosPersonalizadas() {
+    const supabase = window.supabaseClient;
+    if (!supabase) return;
+
+    try {
+        const { data: perfiles, error } = await supabase.from('perfiles').select('nombre, foto_url');
+        if (error) throw error;
+
+        if (perfiles && perfiles.length > 0) {
+            perfiles.forEach(p => {
+                const contenedor = document.getElementById(`foto-${p.nombre}`);
+                if (contenedor && p.foto_url) {
+                    contenedor.innerHTML = `<img src="${p.foto_url}" alt="${p.nombre}">`;
+                }
+            });
+        }
+    } catch (err) {
+        console.log("Usando las imágenes predeterminadas de la carpeta local.");
     }
 }
