@@ -1,5 +1,8 @@
 // js/papa.js
 document.addEventListener('DOMContentLoaded', () => {
+    // Declaramos la variable del cliente
+    let supabase = window.supabaseClient;
+
     const fechaInput = document.getElementById('fecha');
     const hoy = new Date().toISOString().split('T')[0];
     if (fechaInput) fechaInput.value = hoy;
@@ -14,12 +17,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectTituloPapa = document.getElementById('selectTituloPapa');
     const filtrarDestinatario = document.getElementById('filtrarDestinatario');
     const filtrarFechaPapa = document.getElementById('filtrarFechaPapa');
+    const cuentoForm = document.getElementById('cuentoForm');
 
     let archivoPortadaGlobal = null;
     let archivosCuerpoGlobal = []; 
     let todosLosCuentosGlobal = [];
 
-    cargarHistorial();
+    // FUNCIÓN DE CONTROL: Asegura obtener el cliente de Supabase pase lo que pase
+    function obtenerClienteSupabase() {
+        if (!supabase) {
+            supabase = window.supabaseClient;
+        }
+        return supabase;
+    }
+
+    // Retrasamos unos milisegundos la carga inicial para garantizar que conexion.js ya se ejecutó en el navegador
+    setTimeout(() => {
+        cargarHistorial();
+    }, 150);
 
     // Navegación de Pestañas estilo App
     window.cambiarPestaña = function(destino) {
@@ -27,30 +42,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.seccion-panel').forEach(panel => panel.classList.remove('active'));
 
         if(destino === 'crear') {
-            document.querySelector("button[onclick*='crear']").classList.add('active');
-            document.getElementById('seccionCrear').classList.add('active');
+            const btnCrear = document.querySelector("button[onclick*='crear']");
+            if(btnCrear) btnCrear.classList.add('active');
+            const secCrear = document.getElementById('seccionCrear');
+            if(secCrear) secCrear.classList.add('active');
         } else if(destino === 'ver') {
-            document.querySelector("button[onclick*='ver']").classList.add('active');
-            document.getElementById('seccionVer').classList.add('active');
+            const btnVer = document.querySelector("button[onclick*='ver']");
+            if(btnVer) btnVer.classList.add('active');
+            const secVer = document.getElementById('seccionVer');
+            if(secVer) secVer.classList.add('active');
             cargarHistorial();
         } else if(destino === 'configuracion') {
-            document.querySelector("button[onclick*='configuracion']").classList.add('active');
-            document.getElementById('seccionConfiguracion').classList.add('active');
+            const btnConf = document.querySelector("button[onclick*='configuracion']");
+            if(btnConf) btnConf.classList.add('active');
+            const secConf = document.getElementById('seccionConfiguracion');
+            if(secConf) secConf.classList.add('active');
         }
     };
 
-    // --- LOGICA GESTIÓN PORTADA (Click, Drag & Drop, Pegar Ctrl+V) ---
-    dropZone.addEventListener('click', () => portadaInput.click());
-    
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#dcfce7'; });
-    dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f0fdf4'; });
-    dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.style.background = '#f0fdf4';
-        if(e.dataTransfer.files.length > 0) {
-            procesarPortada(e.dataTransfer.files[0]);
-        }
-    });
+    // --- LOGICA GESTIÓN PORTADA ---
+    if (dropZone && portadaInput) {
+        dropZone.addEventListener('click', () => portadaInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#dcfce7'; });
+        dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f0fdf4'; });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.style.background = '#f0fdf4';
+            if(e.dataTransfer.files.length > 0) {
+                procesarPortada(e.dataTransfer.files[0]);
+            }
+        });
+    }
 
     window.addEventListener('paste', (e) => {
         const items = (e.clipboardData || e.originalEvent.clipboardData).items;
@@ -61,110 +84,134 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    portadaInput.addEventListener('change', (e) => {
-        if(e.target.files.length > 0) procesarPortada(e.target.files[0]);
-    });
+    if (portadaInput) {
+        portadaInput.addEventListener('change', (e) => {
+            if(e.target.files.length > 0) procesarPortada(e.target.files[0]);
+        });
+    }
 
     function procesarPortada(file) {
         archivoPortadaGlobal = file;
         const reader = new FileReader();
         reader.onload = (event) => {
-            imgPreview.src = event.target.result;
-            previewContainer.style.display = 'block';
-            dropZone.innerText = "📸 ¡Portada cargada correctamente!";
+            if (imgPreview) imgPreview.src = event.target.result;
+            if (previewContainer) previewContainer.style.display = 'block';
+            if (dropZone) dropZone.innerText = "📸 ¡Portada cargada correctamente!";
         };
         reader.readAsDataURL(file);
     }
 
     // --- ILUSTRACIONES MÚLTIPLES PARA EL CUERPO ---
-    fotosCuerpoInput.addEventListener('change', (e) => {
-        archivosCuerpoGlobal = Array.from(e.target.files);
-        previewCuerpoContainer.innerHTML = '';
-        archivosCuerpoGlobal.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = document.createElement('img');
-                img.src = event.target.result;
-                img.className = 'preview-thumb';
-                previewCuerpoContainer.appendChild(img);
-            };
-            reader.readAsDataURL(file);
+    if (fotosCuerpoInput) {
+        fotosCuerpoInput.addEventListener('change', (e) => {
+            archivosCuerpoGlobal = Array.from(e.target.files);
+            if (previewCuerpoContainer) {
+                previewCuerpoContainer.innerHTML = '';
+                archivosCuerpoGlobal.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = document.createElement('img');
+                        img.src = event.target.result;
+                        img.className = 'preview-thumb';
+                        previewCuerpoContainer.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
         });
-    });
+    }
 
-    // --- ENVÍO COMPLETO A SUPABASE (PORTADA + TEXTO + CUERPO IMAGENES + PREGUNTAS) ---
-    document.getElementById('cuentoForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.innerText = "⚡ Subiendo archivos y publicando...";
-
-        try {
-            let urlPortada = "";
-            if (archivoPortadaGlobal) {
-                const namePort = `portada_${Date.now()}_${archivoPortadaGlobal.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-                const { error: errP } = await window.supabaseClient.storage.from('cuentos-imagenes').upload(namePort, archivoPortadaGlobal);
-                if(errP) throw errP;
-                urlPortada = window.supabaseClient.storage.from('cuentos-imagenes').getPublicUrl(namePort).data.publicUrl;
+    // --- ENVÍO COMPLETO A SUPABASE ---
+    if (cuentoForm) {
+        cuentoForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const client = obtenerClienteSupabase();
+            if (!client) {
+                alert("Error: No se pudo establecer conexión con Supabase. Reensa tu archivo conexion.js");
+                return;
             }
 
-            let urlsCuerpo = [];
-            for (let file of archivosCuerpoGlobal) {
-                const nameCuerpo = `cuerpo_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-                const { error: errC } = await window.supabaseClient.storage.from('cuentos-imagenes').upload(nameCuerpo, file);
-                if(errC) throw errC;
-                const urlC = window.supabaseClient.storage.from('cuentos-imagenes').getPublicUrl(nameCuerpo).data.publicUrl;
-                urlsCuerpo.push(urlC);
+            const btn = e.target.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "⚡ Subiendo archivos y publicando...";
             }
 
-            const p1 = document.getElementById('p1').value.trim();
-            const p2 = document.getElementById('p2').value.trim();
-            const p3 = document.getElementById('p3').value.trim();
-            const p4 = document.getElementById('p4').value.trim();
-            const p5 = document.getElementById('p5').value.trim();
-            let preguntasArr = [];
-            if(p1) preguntasArr.push(p1);
-            if(p2) preguntasArr.push(p2);
-            if(p3) preguntasArr.push(p3);
-            if(p4) preguntasArr.push(p4);
-            if(p5) preguntasArr.push(p5);
+            try {
+                let urlPortada = "";
+                if (archivoPortadaGlobal) {
+                    const namePort = `portada_${Date.now()}_${archivoPortadaGlobal.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+                    const { error: errP } = await client.storage.from('cuentos-imagenes').upload(namePort, archivoPortadaGlobal);
+                    if(errP) throw errP;
+                    urlPortada = client.storage.from('cuentos-imagenes').getPublicUrl(namePort).data.publicUrl;
+                }
 
-            const payload = {
-                titulo: document.getElementById('titulo').value.trim(),
-                fecha_publicacion: document.getElementById('fecha').value,
-                contenido: document.getElementById('contenido').value.trim(),
-                destinatario: document.getElementById('destinatario').value,
-                imagen_url: urlPortada,
-                imagenes_cuerpo: urlsCuerpo,
-                preguntas: preguntasArr
-            };
+                let urlsCuerpo = [];
+                for (let file of archivosCuerpoGlobal) {
+                    const nameCuerpo = `cuerpo_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+                    const { error: errC } = await client.storage.from('cuentos-imagenes').upload(nameCuerpo, file);
+                    if(errC) throw errC;
+                    const urlC = client.storage.from('cuentos-imagenes').getPublicUrl(nameCuerpo).data.publicUrl;
+                    urlsCuerpo.push(urlC);
+                }
 
-            const { error: insertError } = await window.supabaseClient.from('cuentos').insert([payload]);
-            if (insertError) throw insertError;
+                const p1 = document.getElementById('p1')?.value.trim();
+                const p2 = document.getElementById('p2')?.value.trim();
+                const p3 = document.getElementById('p3')?.value.trim();
+                const p4 = document.getElementById('p4')?.value.trim();
+                const p5 = document.getElementById('p5')?.value.trim();
+                let preguntasArr = [];
+                if(p1) preguntasArr.push(p1);
+                if(p2) preguntasArr.push(p2);
+                if(p3) preguntasArr.push(p3);
+                if(p4) preguntasArr.push(p4);
+                if(p5) preguntasArr.push(p5);
 
-            alert("🚀 ¡Cuento publicado perfectamente con todo su multimedia!");
-            document.getElementById('cuentoForm').reset();
-            previewContainer.style.display = 'none';
-            previewCuerpoContainer.innerHTML = '';
-            dropZone.innerText = "📸 Arrastra, pega (Ctrl+V) o toca aquí para subir la Portada";
-            archivoPortadaGlobal = null;
-            archivosCuerpoGlobal = [];
-            fechaInput.value = hoy;
+                const payload = {
+                    titulo: document.getElementById('titulo').value.trim(),
+                    fecha_publicacion: document.getElementById('fecha').value,
+                    contenido: document.getElementById('contenido').value.trim(),
+                    destinatario: document.getElementById('destinatario').value,
+                    imagen_url: urlPortada,
+                    imagenes_cuerpo: urlsCuerpo,
+                    preguntas: preguntasArr
+                };
 
-        } catch (error) {
-            alert("Error al guardar: " + error.message);
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "🚀 Publicar Cuento Mágico";
-        }
-    });
+                const { error: insertError } = await client.from('cuentos').insert([payload]);
+                if (insertError) throw insertError;
+
+                alert("🚀 ¡Cuento publicado perfectamente con todo su multimedia!");
+                cuentoForm.reset();
+                if (previewContainer) previewContainer.style.display = 'none';
+                if (previewCuerpoContainer) previewCuerpoContainer.innerHTML = '';
+                if (dropZone) dropZone.innerText = "📸 Arrastra, pega (Ctrl+V) o toca aquí para subir la Portada";
+                archivoPortadaGlobal = null;
+                archivosCuerpoGlobal = [];
+                if (fechaInput) fechaInput.value = hoy;
+
+            } catch (error) {
+                alert("Error al guardar: " + error.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = "🚀 Publicar Cuento Mágico";
+                }
+            }
+        });
+    }
 
     // --- CARGAR HISTORIAL Y RESPUESTAS ---
     async function cargarHistorial() {
+        const contenedor = document.getElementById('historialContenedor');
+        const client = obtenerClienteSupabase();
+        if (!client) {
+            if (contenedor) contenedor.innerHTML = `<p style="color:#64748b; text-align:center;">Esperando conexión con la base de datos...</p>`;
+            return;
+        }
         try {
-            const { data: cuentos, error: errC } = await window.supabaseClient.from('cuentos').select('*').order('fecha_publicacion', { ascending: false });
+            const { data: cuentos, error: errC } = await client.from('cuentos').select('*').order('fecha_publicacion', { ascending: false });
             if(errC) throw errC;
-            const { data: respuestas, error: errR } = await window.supabaseClient.from('respuestas_hijos').select('*');
+            const { data: respuestas, error: errR } = await client.from('respuestas_hijos').select('*');
             if(errR) throw errR;
 
             todosLosCuentosGlobal = cuentos || [];
@@ -172,11 +219,12 @@ document.addEventListener('DOMContentLoaded', () => {
             renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
 
         } catch (err) {
-            document.getElementById('historialContenedor').innerHTML = `<p style="color:red;">Error: ${err.message}</p>`;
+            if (contenedor) contenedor.innerHTML = `<p style="color:red;">Error de conexión: ${err.message}</p>`;
         }
     }
 
     function llenarFiltrosDeTitulos(cuentos) {
+        if (!selectTituloPapa) return;
         const opcionesPrevia = selectTituloPapa.value;
         selectTituloPapa.innerHTML = '<option value="Todos">👁️ Ver Todos los Cuentos</option>';
         const titulosUnicos = [...new Set(cuentos.map(c => c.titulo))];
@@ -188,21 +236,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if(opcionesPrevia) selectTituloPapa.value = opcionesPrevia;
     }
 
-    // Escuchadores de Filtro Dinámicos
+    // Escuchadores de Filtro Dinámicos y Seguros
     [selectTituloPapa, filtrarDestinatario, filtrarFechaPapa].forEach(elem => {
-        elem.addEventListener('change', async () => {
-            const { data: respuestas } = await window.supabaseClient.from('respuestas_hijos').select('*');
-            renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
-        });
+        if (elem) {
+            elem.addEventListener('change', async () => {
+                const client = obtenerClienteSupabase();
+                if (!client) return;
+                const { data: respuestas } = await client.from('respuestas_hijos').select('*');
+                renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
+            });
+        }
     });
 
     function renderizarHistorialFiltrado(cuentos, respuestas) {
         const contenedor = document.getElementById('historialContenedor');
+        if (!contenedor) return;
         contenedor.innerHTML = '';
 
-        const fTitulo = selectTituloPapa.value;
-        const fDest = filtrarDestinatario.value;
-        const fFecha = filtrarFechaPapa.value;
+        const fTitulo = selectTituloPapa ? selectTituloPapa.value : 'Todos';
+        const fDest = filtrarDestinatario ? filtrarDestinatario.value : 'Todos';
+        const fFecha = filtrarFechaPapa ? filtrarFechaPapa.value : '';
 
         let filtrados = cuentos.filter(c => {
             if(fTitulo !== 'Todos' && c.titulo !== fTitulo) return false;
@@ -219,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
         filtrados.forEach(c => {
             const respuestasEsteCuento = respuestas.filter(r => r.cuento_id === c.id);
             
-            // Generar checks visuales dinámicos
             const tieneThommy = respuestasEsteCuento.some(r => r.lector === 'Thommy');
             const tieneAlma = respuestasEsteCuento.some(r => r.lector === 'Alma');
             let checksHtml = "";
@@ -235,7 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 miniGaleriaCuerpoHtml += `</div>`;
             }
 
-            // Mapeo y agrupación de respuestas de los niños
             let preguntasAgrupadasHtml = "";
             if(c.preguntas && c.preguntas.length > 0) {
                 c.preguntas.forEach((preg, idx) => {
@@ -294,51 +345,68 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleDetalleCuento = function(id) {
         const elemento = document.getElementById(id);
         const flecha = document.getElementById(`flecha-${id}`);
-        if (elemento.style.display === "none") {
-            elemento.style.display = "block";
-            if(flecha) flecha.style.transform = "rotate(180deg)";
-        } else {
-            elemento.style.display = "none";
-            if(flecha) flecha.style.transform = "rotate(0deg)";
+        if (elemento) {
+            if (elemento.style.display === "none" || elemento.style.display === "") {
+                elemento.style.display = "block";
+                if(flecha) flecha.style.transform = "rotate(180deg)";
+            } else {
+                elemento.style.display = "none";
+                if(flecha) flecha.style.transform = "rotate(0deg)";
+            }
         }
     };
 
     window.abrirModal = function(url) {
-        document.getElementById('imageModal').style.display = "flex";
-        document.getElementById('imgModalTarget').src = url;
+        const modal = document.getElementById('imageModal');
+        const target = document.getElementById('imgModalTarget');
+        if(modal && target) {
+            modal.style.display = "flex";
+            target.src = url;
+        }
     };
 
-    document.getElementById('closeModal').addEventListener('click', () => {
-        document.getElementById('imageModal').style.display = "none";
-    });
+    const closeBtn = document.getElementById('closeModal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            const modal = document.getElementById('imageModal');
+            if(modal) modal.style.display = "none";
+        });
+    }
 
-    // --- CONFIGURACIÓN DINÁMICA DE PERFILES (FOTO + MÚSICA) ---
+    // --- CONFIGURACIÓN DINÁMICA DE PERFILES ---
     window.guardarConfigHijo = async () => {
-        const nombre = document.getElementById('hijoSelect').value;
-        const foto = document.getElementById('fotoHijoInput').files[0];
-        const musica = document.getElementById('musicaHijoInput').files[0];
+        const client = obtenerClienteSupabase();
+        if (!client) return;
+        const hijoSel = document.getElementById('hijoSelect');
+        const fotoInput = document.getElementById('fotoHijoInput');
+        const musicaInput = document.getElementById('musicaHijoInput');
+        
+        if(!hijoSel) return;
+        const nombre = hijoSel.value;
+        const foto = fotoInput ? fotoInput.files[0] : null;
+        const musica = musicaInput ? musicaInput.files[0] : null;
 
         try {
             let fUrl = null; let mUrl = null;
             if(foto) {
                 const nameF = `avatar_${nombre}_${Date.now()}.png`;
-                await window.supabaseClient.storage.from('perfiles').upload(nameF, foto, {upsert:true});
-                fUrl = window.supabaseClient.storage.from('perfiles').getPublicUrl(nameF).data.publicUrl;
+                await client.storage.from('perfiles').upload(nameF, foto, {upsert:true});
+                fUrl = client.storage.from('perfiles').getPublicUrl(nameF).data.publicUrl;
             }
             if(musica) {
                 const nameM = `musica_${nombre}_${Date.now()}.mp3`;
-                await window.supabaseClient.storage.from('perfiles').upload(nameM, musica, {upsert:true});
-                mUrl = window.supabaseClient.storage.from('perfiles').getPublicUrl(nameM).data.publicUrl;
+                await client.storage.from('perfiles').upload(nameM, musica, {upsert:true});
+                mUrl = client.storage.from('perfiles').getPublicUrl(nameM).data.publicUrl;
             }
 
             const updatePayload = { nombre };
             if (fUrl) updatePayload.foto_url = fUrl;
             if (mUrl) updatePayload.musica_fondo_url = mUrl;
 
-            await window.supabaseClient.from('perfiles_hijos').upsert(updatePayload, { onConflict: 'nombre' });
+            await client.from('perfiles_hijos').upsert(updatePayload, { onConflict: 'nombre' });
             alert(`✅ ¡Perfil de ${nombre} guardado y actualizado con éxito!`);
-            document.getElementById('fotoHijoInput').value = '';
-            document.getElementById('musicaHijoInput').value = '';
+            if(fotoInput) fotoInput.value = '';
+            if(musicaInput) musicaInput.value = '';
         } catch(e) { 
             alert("Error al configurar perfil: " + e.message); 
         }

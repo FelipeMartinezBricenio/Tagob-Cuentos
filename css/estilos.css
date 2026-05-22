@@ -7,7 +7,7 @@
 }
 
 body {
-    background-image: linear-gradient(rgba(248, 250, 252, 0.85), rgba(248, 250, 252, 0.85)), url('fondo_naturaleza.jpg');
+    background-image: linear-gradient(rgba(248, 250, 252, 0.88), rgba(248, 250, 252, 0.88)), url('../fondo_naturaleza.jpg');
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
@@ -16,13 +16,26 @@ body {
     padding-bottom: 40px;
 }
 
+.container {
+    width: 100%;
+    max-width: 650px;
+    margin: 0 auto;
+    padding: 20px 16px;
+}
+
 .card {
     background: #ffffff;
-    border-radius: 24px;
-    padding: 20px;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
     border: 1px solid #f1f5f9;
     margin-bottom: 20px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06);
 }
 
 input, select, textarea {
@@ -30,32 +43,57 @@ input, select, textarea {
     padding: 14px 16px;
     margin: 8px 0 18px 0;
     border: 1px solid #cbd5e1;
-    border-radius: 14px;
-    font-size: 16px;
-    background: #ffffff;
+    border-radius: 12px;
+    font-size: 15px;
+    background-color: #f8fafc;
     color: #1e293b;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus, select:focus, textarea:focus {
     border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    background-color: #ffffff;
+}
+
+textarea {
+    resize: vertical;
 }
 
 .btn-app {
-    display: block;
     width: 100%;
-    padding: 16px;
-    border-radius: 14px;
+    padding: 14px;
     border: none;
+    border-radius: 14px;
+    font-weight: bold;
+    font-size: 15px;
     color: white;
-    font-weight: 700;
-    font-size: 16px;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-    transition: transform 0.1s ease, background-color 0.2s;
+    transition: background 0.2s, transform 0.1s;
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
 }
 
 .btn-app:active {
     transform: scale(0.98);
+}
+
+.btn-logout {
+    padding: 8px 14px;
+    background: #94a3b8;
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
 }
