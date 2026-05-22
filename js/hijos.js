@@ -48,14 +48,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // CARGAR CUENTOS DESDE SUPABASE (Adaptado a las columnas y destinatarios reales)
+    // CARGAR CUENTOS DESDE SUPABASE
     async function cargarCuentosHijo() {
         try {
             const { data, error } = await window.supabaseClient
                 .from('cuentos')
                 .select('*')
-                .or(`destinatario.eq.Ambos,destinatario.eq.${lector}`) // Cambiado de 'Todos' a 'Ambos'
-                .order('fecha_publicacion', { ascending: false });    // Cambiado de 'fecha_creacion' a 'fecha_publicacion'
+                .or(`destinatario.eq.Ambos,destinatario.eq.${lector}`)
+                .order('fecha_publicacion', { ascending: false });
 
             if(error) throw error;
             todosLosCuentosHijo = data || [];
@@ -78,7 +78,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             item.className = 'cuento-item-lista';
             item.onclick = () => abrirCuentoParaLeer(cuento);
 
-            // CORRECCIÓN: Se cambió 'portada_url' por 'imagen_url' que viene de la BD
             const portada = cuento.imagen_url || 'https://images.unsplash.com/photo-1512820790803-83ca734da794?q=80&w=150';
             
             item.innerHTML = `
@@ -109,7 +108,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(buscarTituloHijo) buscarTituloHijo.addEventListener('input', aplicarFiltrosHijo);
     if(buscarFechaHijo) buscarFechaHijo.addEventListener('change', aplicarFiltrosHijo);
 
-    window.abrirCuentoParaLeer = function(cuento) {
+    // CONTROL DE LECTURA ADAPTADO A CELULARES Y COMPUTADORAS
+    window.openLectorSeguro = window.abrirCuentoParaLeer = function(cuento) {
         if(!cuentoAbiertoContenedor || !listaCatalogo || !zonaFiltrosHijos) return;
 
         if(cuento.musica_fondo_url) {
@@ -123,42 +123,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         listaCatalogo.style.display = 'none';
         zonaFiltrosHijos.style.display = 'none';
 
-        // CORRECCIÓN: 'imagen_url' es la propiedad real de la portada
-        const portadaHtml = cuento.imagen_url ? `<img class="cuento-banner-portada" src="${cuento.imagen_url}" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:15px;">` : '';
+        const portadaHtml = cuento.imagen_url ? `<img class="cuento-banner-portada" src="${cuento.imagen_url}">` : '';
         
         let galeriaHtml = '';
         if(cuento.imagenes_cuerpo && cuento.imagenes_cuerpo.length > 0) {
-            galeriaHtml = '<div class="galeria-cuerpo" style="display:flex; gap:10px; margin-bottom:20px; overflow-x:auto;">';
+            galeriaHtml = '<div class="galeria-cuerpo">';
             cuento.imagenes_cuerpo.forEach(imgUrl => {
-                galeriaHtml += `<img src="${imgUrl}" onclick="abrirHijoModal('${imgUrl}', 'image')" style="width:80px; height:80px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid #e2e8f0;">`;
+                galeriaHtml += `<img src="${imgUrl}" onclick="abrirHijoModal('${imgUrl}', 'image')" style="cursor:pointer;">`;
             });
             galeriaHtml += '</div>';
         }
 
-        // CORRECCIÓN CENTRAL: Adaptar la lectura del array dinámico de preguntas de Papá
         let cuestionarioHtml = '';
         if(cuento.preguntas && Array.isArray(cuento.preguntas) && cuento.preguntas.length > 0) {
             cuestionarioHtml = `
-                <div class="cuestionario-caja" style="background:#f8fafc; padding:20px; border-radius:16px; border:1px solid #e2e8f0; margin-top:20px;">
-                    <h3 style="margin-top:0; margin-bottom:15px; color:#1e293b; text-align:center;">🌟 ¡Responde las preguntas de Papá!</h3>
+                <div class="cuestionario-caja">
+                    <h3 style="margin-top:0; margin-bottom:15px; color:#1e293b; text-align:center; font-size:18px;">🌟 ¡Responde las preguntas de Papá!</h3>
             `;
 
             cuento.preguntas.forEach((preguntaTexto, idx) => {
-                // Inyectamos inputs de texto y controles multimedia por cada pregunta para que elijan cómo responder
                 cuestionarioHtml += `
-                    <div class="pregunta-item" data-index="${idx}" style="background:#ffffff; padding:15px; border-radius:12px; margin-bottom:15px; border:1px solid #edf2f7; text-align:left;">
-                        <p style="font-weight:bold; color:#1e293b; margin:0 0 10px 0;">📌 Pregunta ${idx + 1}: ${preguntaTexto}</p>
+                    <div class="pregunta-item" data-index="${idx}" style="text-align:left;">
+                        <p>📌 Pregunta ${idx + 1}: ${preguntaTexto}</p>
                         
-                        <textarea class="respuesta-texto-hijo" data-index="${idx}" rows="2" placeholder="Escribe tu respuesta aquí..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; resize:none; margin-bottom:10px;"></textarea>
+                        <textarea class="respuesta-texto-hijo" data-index="${idx}" rows="2" placeholder="Escribe tu respuesta aquí..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-family:inherit; resize:none; margin-bottom:10px; font-size:14px; box-sizing:border-box;"></textarea>
                         
-                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; background:#f1f5f9; padding:8px; border-radius:8px;">
-                            <button type="button" class="btn-app" style="background:#0ea5e9; font-size:12px; padding:6px 12px;" onclick="activarCamaraHijo(${idx})">📸 Foto / Video</button>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; background:#f1f5f9; padding:8px; border-radius:8px;">
+                            <button type="button" class="btn" style="background:#0ea5e9; color:white; font-size:12px; padding:6px 10px; border-radius:6px; border:none; cursor:pointer;" onclick="activarCamaraHijo(${idx})">📸 Foto / Video</button>
                             
                             <div style="display:flex; gap:5px; align-items:center;">
-                                <button type="button" id="btn_grab_start_${idx}" class="btn-app" style="background:#e11d48; font-size:12px; padding:6px 12px;" onclick="iniciarGrabacionVoz(${idx})">🎙️ Grabar Voz</button>
-                                <button type="button" id="btn_grab_stop_${idx}" class="btn-app" style="background:#475569; font-size:12px; padding:6px 12px; display:none;" onclick="detenerGrabacionVoz(${idx})">🛑 Parar</button>
+                                <button type="button" id="btn_grab_start_${idx}" class="btn" style="background:#e11d48; color:white; font-size:12px; padding:6px 10px; border-radius:6px; border:none; cursor:pointer;" onclick="iniciarGrabacionVoz(${idx})">🎙️ Voz</button>
+                                <button type="button" id="btn_grab_stop_${idx}" class="btn" style="background:#475569; color:white; font-size:12px; padding:6px 10px; border-radius:6px; border:none; display:none; cursor:pointer;" onclick="detenerGrabacionVoz(${idx})">🛑 Parar</button>
                             </div>
-                            <span id="status_grab_${idx}" style="font-size:12px; color:#64748b;">Sin archivos adjuntos</span>
+                            <span id="status_grab_${idx}" style="font-size:11px; color:#64748b;">Sin adjuntos</span>
                         </div>
                         
                         <div id="preview_multimedia_${idx}" style="margin-top:8px;"></div>
@@ -167,23 +164,34 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
             });
 
+            // Almacenamos id y título de forma segura usando data-attributes para evitar errores de comillas en móvil
             cuestionarioHtml += `
-                    <button type="button" class="btn-app" style="background:#10b981; font-size:16px; margin-top:15px; width:100%; cursor:pointer;" onclick="enviarCuestionarioCompleto(${cuento.id}, '${cuento.titulo.replace(/'/g, "\\'")}')">🚀 Guardar y Enviar a Papá</button>
+                    <button type="button" id="btnEnviarTodoElCuestionario" data-id="${cuento.id}" data-titulo="${cuento.titulo.replace(/"/g, '&quot;')}" class="btn" style="background:#10b981; color:white; font-size:16px; margin-top:15px; width:100%; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer;">🚀 Guardar y Enviar a Papá</button>
                 </div>
             `;
         } else {
-            cuestionarioHtml = '<p style="color:#64748b; font-style:italic; text-align:center; padding:15px; background:#f1f5f9; border-radius:12px; margin-top:20px;">¡Este cuento es para disfrutar la lectura! No tiene preguntas asignadas. 📖✨</p>';
+            cuestionarioHtml = '<p style="color:#64748b; font-style:italic; text-align:center; padding:15px; background:#f1f5f9; border-radius:12px; margin-top:20px; font-size:14px;">¡Este cuento es para disfrutar la lectura! No tiene preguntas asignadas. 📖✨</p>';
         }
 
         cuentoAbiertoContenedor.innerHTML = `
-            <button type="button" class="btn-app btn-regresar" style="margin-bottom:15px;" onclick="regresarAlCatalogo()">⬅ Volver al Catálogo</button>
-            <h2 style="color:#1e293b; margin-bottom:15px;">${cuento.titulo}</h2>
+            <button type="button" class="btn btn-regresar" onclick="regresarAlCatalogo()">⬅ Volver al Catálogo</button>
+            <h2 style="color:#1e293b; margin-bottom:15px; font-size:22px;">${cuento.titulo}</h2>
             ${portadaHtml}
-            <div style="font-size:16px; line-height:1.7; color:#334155; white-space:pre-wrap; margin-bottom:20px; text-align:left;">${cuento.contenido}</div>
+            <div style="font-size:15px; line-height:1.6; color:#334155; white-space:pre-wrap; margin-bottom:20px; text-align:left;">${cuento.contenido}</div>
             ${galeriaHtml}
             ${cuestionarioHtml}
         `;
         cuentoAbiertoContenedor.style.display = 'block';
+
+        // EventListener asíncrono para evitar bloqueos en el motor JS de teléfonos móviles
+        const btnEnviar = document.getElementById('btnEnviarTodoElCuestionario');
+        if(btnEnviar) {
+            btnEnviar.addEventListener('click', function() {
+                const idCuento = this.getAttribute('data-id');
+                const tituloCuento = this.getAttribute('data-titulo');
+                window.enviarCuestionarioCompleto(idCuento, tituloCuento);
+            });
+        }
     }
 
     window.regresarAlCatalogo = function() {
@@ -279,7 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // ENVIAR RESPUESTAS A LA TABLA respuestas_hijos
+    // ENVIAR RESPUESTAS A LA TABLA respuestas_hijos / responses_hijos
     window.enviarCuestionarioCompleto = async function(cuentoId, cuentoTitulo) {
         try {
             const itemsPreguntas = document.querySelectorAll('.pregunta-item');
@@ -293,7 +301,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let urlPublica = null;
                 let tipoArchivoFinal = null;
 
-                // Si el niño adjuntó audio/foto/video se sube al bucket validado 'respuestas-hijos'
                 if(fileObj && fileObj.archivo) {
                     tipoArchivoFinal = fileObj.tipo;
                     const extension = tipoArchivoFinal === 'audio' ? 'mp3' : (tipoArchivoFinal === 'video' ? 'mp4' : 'png');
@@ -309,9 +316,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     urlPublica = data.publicUrl;
                 }
 
-                // Inserción limpia con las columnas correctas en respuestas_hijos
                 const { error: insertError } = await window.supabaseClient
-                    .from('respuestas_hijos')
+                    .from('responses_hijos' in window ? 'responses_hijos' : 'respuestas_hijos')
                     .insert([{
                         cuento_id: cuentoId,
                         cuento_titulo: cuentoTitulo,
@@ -331,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             cargarCuentosHijo();
 
         } catch (err) {
-            alert("Error de supabase al guardar tus respuestas: " + err.message);
+            alert("Error al guardar tus respuestas: " + err.message);
         }
     };
 
