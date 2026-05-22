@@ -2,54 +2,246 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Cuentos - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cuentos Mágicos - Login</title>
     <link rel="stylesheet" href="css/estilos.css">
     <style>
-        .grid-usuarios { display: grid; grid-template-columns: repeat(3, 100px); gap: 15px; justify-content: center; margin-bottom: 25px; }
-        .avatar-btn { background: white; border: 2px solid #ccc; border-radius: 12px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.3s; }
-        .avatar-btn:hover { transform: translateY(-3px); border-color: #3498db; }
-        .avatar-btn.selected { border-color: #2ecc71; background-color: #e8f8f5; }
-        .avatar-img { font-size: 35px; display: block; margin-bottom: 5px; }
-        .avatar-name { font-weight: bold; font-size: 14px; }
-        #seccionClave { display: none; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+        body {
+            background: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 16px;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 420px; /* Tamaño perfecto de teléfono */
+            text-align: center;
+        }
+        .app-header {
+            margin-bottom: 30px;
+        }
+        .app-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin: 0;
+        }
+        .app-subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin: 5px 0 0 0;
+        }
+
+        /* Lista de Perfiles en Formato App (Bloques Grandes) */
+        .lista-perfiles-app {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .item-perfil-app {
+            background: white;
+            border-radius: 20px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            transition: transform 0.1s ease, border-color 0.2s;
+        }
+        .item-perfil-app:active {
+            transform: scale(0.98);
+            border-color: #6366f1;
+            background: #f8fafc;
+        }
+        
+        /* Cuadrados Grandes para las fotos de la carpeta CSS */
+        .cuadrado-foto {
+            width: 85px;
+            height: 85px;
+            border-radius: 16px; /* Bordes suavemente redondeados, estilo app moderna */
+            overflow: hidden;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .cuadrado-foto img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .info-usuario {
+            text-align: left;
+        }
+        .nombre-user {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+        .rol-user {
+            font-size: 13px;
+            color: #64748b;
+            margin: 2px 0 0 0;
+        }
+
+        /* Modal del Teclado Numérico del Teléfono */
+        .modal-pin {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end; /* Abre desde abajo tipo tarjeta de celular */
+        }
+        .modal-pin-contenido {
+            background: white;
+            border-radius: 30px 30px 0 0;
+            padding: 24px 24px 40px 24px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 -10px 25px rgba(0,0,0,0.1);
+            animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .puntos-pin {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin: 20px 0;
+        }
+        .punto {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid #cbd5e1;
+            transition: 0.1s;
+        }
+        .punto.activo {
+            background: #6366f1;
+            border-color: #6366f1;
+            transform: scale(1.2);
+        }
+        .teclado-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .tecla {
+            background: #f1f5f9;
+            border: none;
+            border-radius: 16px;
+            padding: 16px;
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+            cursor: pointer;
+            user-select: none;
+        }
+        .tecla:active {
+            background: #cbd5e1;
+        }
+        .tecla.accion {
+            font-size: 15px;
+            background: #e2e8f0;
+            color: #475569;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
 
-    <div class="login-card" style="text-align: center;">
-        <h1>📚 Cuentos Interactivos</h1>
-        <p style="color: #7f8c8d;">Selecciona tu perfil para ingresar:</p>
+<div class="app-container">
+    <div class="app-header">
+        <h1 class="app-title">✨ Cuentos Mágicos</h1>
+        <p class="app-subtitle">Selecciona tu perfil para ingresar</p>
+    </div>
+    
+    <div class="lista-perfiles-app">
         
-        <div class="grid-usuarios">
-            <div class="avatar-btn" onclick="seleccionarUsuario('Papa')">
-                <span class="avatar-img">👨‍💻</span>
-                <span class="avatar-name">Papá</span>
+        <div class="item-perfil-app" onclick="abrirLoginPIN('Papá')">
+            <div class="cuadrado-foto" id="foto-Papa">
+                <img src="css/papa.png" onerror="this.style.display='none'; this.parentNode.innerText='👨‍💻'">
             </div>
-            <div class="avatar-btn" onclick="seleccionarUsuario('Thommy')">
-                <span class="avatar-img">👦</span>
-                <span class="avatar-name">Thommy</span>
-            </div>
-            <div class="avatar-btn" onclick="seleccionarUsuario('Alma')">
-                <span class="avatar-img">👶</span>
-                <span class="avatar-name">Alma</span>
+            <div class="info-usuario">
+                <p class="nombre-user">Papá</p>
+                <p class="rol-user">Panel de Control Master</p>
             </div>
         </div>
 
-        <form id="loginForm">
-            <input type="hidden" id="usuarioSeleccionado" value="">
-            
-            <div id="seccionClave">
-                <label id="labelClave" for="passwordInput">Introduce la contraseña:</label>
-                <input type="password" id="passwordInput" placeholder="Contraseña..." required style="margin-bottom: 15px;">
-                <button type="submit" class="btn btn-submit" style="background-color: #3498db;">🔑 Entrar</button>
+        <div class="item-perfil-app" onclick="abrirLoginPIN('Thommy')">
+            <div class="cuadrado-foto" id="foto-Thommy">
+                <img src="css/thommy.png" onerror="this.style.display='none'; this.parentNode.innerText='👦'">
             </div>
-        </form>
+            <div class="info-usuario">
+                <p class="nombre-user">Thommy</p>
+                <p class="rol-user">Mis Lecturas y Ejercicios</p>
+            </div>
+        </div>
+
+        <div class="item-perfil-app" onclick="abrirLoginPIN('Alma')">
+            <div class="cuadrado-foto" id="foto-Alma">
+                <img src="css/alma.png" onerror="this.style.display='none'; this.parentNode.innerText='👶'">
+            </div>
+            <div class="info-usuario">
+                <p class="nombre-user">Alma</p>
+                <p class="rol-user">Cuentos Cortos y Sumas</p>
+            </div>
+        </div>
+
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="js/conexion.js"></script>
-    <script src="js/login.js"></script>
+<div class="modal-pin" id="modalPin">
+    <div class="modal-pin-contenido">
+        <h3 id="modalTitulo" style="margin: 0; font-size: 18px; color: #1e293b;">Introduce tu PIN de acceso</h3>
+        <p style="font-size: 13px; color: #64748b; margin: 4px 0 10px 0;">Perfil: <span id="nombreUsuarioCambiante" style="font-weight: bold; color: #6366f1;"></span></p>
+        
+        <div class="puntos-pin">
+            <div class="punto" id="p0"></div>
+            <div class="punto" id="p1"></div>
+            <div class="punto" id="p2"></div>
+            <div class="punto" id="p3"></div>
+        </div>
 
+        <div class="teclado-grid">
+            <button class="tecla" onclick="presionarNumero('1')">1</button>
+            <button class="tecla" onclick="presionarNumero('2')">2</button>
+            <button class="tecla" onclick="presionarNumero('3')">3</button>
+            <button class="tecla" onclick="presionarNumero('4')">4</button>
+            <button class="tecla" onclick="presionarNumero('5')">5</button>
+            <button class="tecla" onclick="presionarNumero('6')">6</button>
+            <button class="tecla" onclick="presionarNumero('7')">7</button>
+            <button class="tecla" onclick="presionarNumero('8')">8</button>
+            <button class="tecla" onclick="presionarNumero('9')">9</button>
+            <button class="tecla accion" onclick="cerrarModalPin()">Cancelar</button>
+            <button class="tecla" onclick="presionarNumero('0')">0</button>
+            <button class="tecla accion" onclick="borrarUltimo()">⌫</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/conexion.js"></script>
+<script src="js/login.js"></script>
 </body>
 </html>

@@ -1,11 +1,64 @@
 // js/papa.js
+
+// Variables de estado globales para que todo el archivo tenga acceso
+let todosLosCuentosGlobal = [];
+let archivoPortadaGlobal = null;
+let archivosCuerpoGlobal = []; 
+let contadorPreguntas = 0;
+
+// 1. FUNCIONES DE NAVEGACIÓN GLOBAL (Disponibles inmediatamente para los botones del HTML)
+window.cambiarPestaña = function(destino) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.seccion-panel').forEach(panel => panel.classList.remove('active'));
+
+    if (destino === 'crear') {
+        const btnCrear = document.querySelector("button[onclick*='crear']");
+        if (btnCrear) btnCrear.classList.add('active');
+        const secCrear = document.getElementById('seccionCrear');
+        if (secCrear) secCrear.classList.add('active');
+    } else if (destino === 'ver') {
+        const btnVer = document.querySelector("button[onclick*='ver']");
+        if (btnVer) btnVer.classList.add('active');
+        const secVer = document.getElementById('seccionVer');
+        if (secVer) secVer.classList.add('active');
+        
+        // Ejecuta la recarga del historial al pulsar la pestaña
+        if (typeof window.cargarHistorialGlobal === 'function') {
+            window.cargarHistorialGlobal();
+        }
+    }
+};
+
+window.toggleDetalleCuento = function(id) {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+        elemento.style.display = (elemento.style.display === "none" || elemento.style.display === "") ? "block" : "none";
+    }
+};
+
+window.abrirModal = function(url) {
+    const modal = document.getElementById('imageModal');
+    const target = document.getElementById('imgModalTarget');
+    if (modal && target) {
+        modal.style.display = "flex";
+        target.src = url;
+    }
+};
+
+
+// 2. LOGICA DE INICIALIZACIÓN CUANDO EL HTML ESTÁ LISTO
 document.addEventListener('DOMContentLoaded', () => {
-    // Declaramos la variable del cliente
     let supabase = window.supabaseClient;
 
+    function obtenerClienteSupabase() {
+        if (!supabase) supabase = window.supabaseClient;
+        return supabase;
+    }
+
     const fechaInput = document.getElementById('fecha');
-    const hoy = new Date().toISOString().split('T')[0];
-    if (fechaInput) fechaInput.value = hoy;
+    if (fechaInput) {
+        fechaInput.value = new Date().toISOString().split('T')[0];
+    }
 
     const portadaInput = document.getElementById('portada');
     const fotosCuerpoInput = document.getElementById('fotosCuerpo');
@@ -18,60 +71,96 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtrarDestinatario = document.getElementById('filtrarDestinatario');
     const filtrarFechaPapa = document.getElementById('filtrarFechaPapa');
     const cuentoForm = document.getElementById('cuentoForm');
+    const contenedorPreguntasDinamicas = document.getElementById('contenedorPreguntasDinamicas');
+    const btnAgregarPregunta = document.getElementById('btnAgregarPregunta');
 
-    let archivoPortadaGlobal = null;
-    let archivosCuerpoGlobal = []; 
-    let todosLosCuentosGlobal = [];
-
-    // FUNCIÓN DE CONTROL: Asegura obtener el cliente de Supabase pase lo que pase
-    function obtenerClienteSupabase() {
-        if (!supabase) {
-            supabase = window.supabaseClient;
-        }
-        return supabase;
+    // Inicializar cuestionario dinámico básico
+    if (btnAgregarPregunta && contenedorPreguntasDinamicas) {
+        btnAgregarPregunta.addEventListener('click', () => agregarNuevaPregunta());
+        agregarNuevaPregunta(); 
     }
 
-    // Retrasamos unos milisegundos la carga inicial para garantizar que conexion.js ya se ejecutó en el navegador
-    setTimeout(() => {
-        cargarHistorial();
-    }, 150);
+    function agregarNuevaPregunta() {
+        if (!contenedorPreguntasDinamicas) return;
+        
+        const idPregunta = contadorPreguntas++;
+        const divPregunta = document.createElement('div');
+        divPregunta.className = 'bloque-pregunta-creada';
+        divPregunta.id = `bloque_preg_${idPregunta}`;
+        divPregunta.style = "background: rgba(248, 250, 252, 0.9); border: 1px solid #cbd5e1; padding: 15px; border-radius: 14px; margin-bottom: 15px; position: relative;";
 
-    // Navegación de Pestañas estilo App
-    window.cambiarPestaña = function(destino) {
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelectorAll('.seccion-panel').forEach(panel => panel.classList.remove('active'));
+        divPregunta.innerHTML = `
+            <button type="button" class="btn-eliminar-preg" data-id="${idPregunta}" style="position: absolute; top: 12px; right: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 11px; font-weight: bold;">🗑️ Eliminar</button>
+            <div style="margin-bottom: 10px; width: 80%;">
+                <label style="font-size: 13px; font-weight: 700; color: #475569;">Pregunta:</label>
+                <input type="text" class="input-enunciado-pregunta" placeholder="Ej. ¿De qué color era el dragón?" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 14px;" required>
+            </div>
+            <div style="margin-bottom: 5px;">
+                <label style="font-size: 13px; font-weight: 700; color: #475569;">Tipo de formato:</label>
+                <select class="select-tipo-pregunta" data-id="${idPregunta}" style="width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: 600; background: white;">
+                    <option value="tradicional">📝 Abierta (Texto, Foto o Audio)</option>
+                    <option value="multiple">🔢 Opción Múltiple (Alternativas)</option>
+                </select>
+            </div>
+            <div id="zona_opciones_${idPregunta}" style="display: none; background: white; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 10px;">
+                <label style="font-size: 12px; font-weight: bold; color: #4f46e5; display: block; margin-bottom: 5px;">Escribe las alternativas de respuesta:</label>
+                <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa A" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
+                <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa B" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
+                <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa C" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
+                <input type="text" class="opcion-item-${idPregunta}" placeholder="Alternativa D" style="width: 100%; padding: 7px; margin: 4px 0; border: 1px solid #e2e8f0; border-radius: 6px; box-sizing: border-box; font-size: 13px;">
+            </div>
+        `;
 
-        if(destino === 'crear') {
-            const btnCrear = document.querySelector("button[onclick*='crear']");
-            if(btnCrear) btnCrear.classList.add('active');
-            const secCrear = document.getElementById('seccionCrear');
-            if(secCrear) secCrear.classList.add('active');
-        } else if(destino === 'ver') {
-            const btnVer = document.querySelector("button[onclick*='ver']");
-            if(btnVer) btnVer.classList.add('active');
-            const secVer = document.getElementById('seccionVer');
-            if(secVer) secVer.classList.add('active');
-            cargarHistorial();
-        } else if(destino === 'configuracion') {
-            const btnConf = document.querySelector("button[onclick*='configuracion']");
-            if(btnConf) btnConf.classList.add('active');
-            const secConf = document.getElementById('seccionConfiguracion');
-            if(secConf) secConf.classList.add('active');
-        }
-    };
+        contenedorPreguntasDinamicas.appendChild(divPregunta);
 
-    // --- LOGICA GESTIÓN PORTADA ---
+        divPregunta.querySelector('.btn-eliminar-preg')?.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            document.getElementById(`bloque_preg_${id}`)?.remove();
+        });
+
+        divPregunta.querySelector('.select-tipo-pregunta')?.addEventListener('change', function() {
+            const id = this.getAttribute('data-id');
+            const zonaOpciones = document.getElementById(`zona_opciones_${id}`);
+            if (zonaOpciones) zonaOpciones.style.display = this.value === 'multiple' ? 'block' : 'none';
+        });
+    }
+
+    function recolectarPreguntasEstructuradas() {
+        const bloques = document.querySelectorAll('.bloque-pregunta-creada');
+        let preguntasArr = [];
+
+        bloques.forEach(bloque => {
+            const enunciadoInput = block => bloque.querySelector('.input-enunciado-pregunta');
+            const enunciado = enunciadoInput(bloque);
+            const tipoSelect = bloque.querySelector('.select-tipo-pregunta');
+            
+            if (enunciado && enunciado.value.trim() !== "") {
+                const tipo = tipoSelect ? tipoSelect.value : 'tradicional';
+                let objetoPregunta = { texto: enunciado.value.trim(), tipo: tipo };
+
+                if (tipo === 'multiple') {
+                    let opciones = [];
+                    const idPregunta = tipoSelect.getAttribute('data-id');
+                    const inputsOpciones = bloque.querySelectorAll(`.opcion-item-${idPregunta}`);
+                    inputsOpciones.forEach(inp => {
+                        if (inp.value.trim() !== "") opciones.push(inp.value.trim());
+                    });
+                    objetoPregunta.opciones = opciones;
+                }
+                preguntasArr.push(objetoPregunta);
+            }
+        });
+        return preguntasArr;
+    }
+
+    // --- CARGA DE MULTIMEDIA INTERNA ---
     if (dropZone && portadaInput) {
         dropZone.addEventListener('click', () => portadaInput.click());
-        
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.background = '#dcfce7'; });
         dropZone.addEventListener('dragleave', () => { dropZone.style.background = '#f0fdf4'; });
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
-            dropZone.style.background = '#f0fdf4';
-            if(e.dataTransfer.files.length > 0) {
-                procesarPortada(e.dataTransfer.files[0]);
-            }
+            if(e.dataTransfer.files.length > 0) procesarPortada(e.dataTransfer.files[0]);
         });
     }
 
@@ -101,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
         reader.readAsDataURL(file);
     }
 
-    // --- ILUSTRACIONES MÚLTIPLES PARA EL CUERPO ---
     if (fotosCuerpoInput) {
         fotosCuerpoInput.addEventListener('change', (e) => {
             archivosCuerpoGlobal = Array.from(e.target.files);
@@ -121,93 +209,65 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- ENVÍO COMPLETO A SUPABASE ---
+    // --- SUBIDA A SUPABASE ---
     if (cuentoForm) {
         cuentoForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const client = obtenerClienteSupabase();
-            if (!client) {
-                alert("Error: No se pudo establecer conexión con Supabase. Reensa tu archivo conexion.js");
-                return;
-            }
+            if (!client) return;
 
             const btn = e.target.querySelector('button[type="submit"]');
-            if (btn) {
-                btn.disabled = true;
-                btn.innerText = "⚡ Subiendo archivos y publicando...";
-            }
+            if (btn) { btn.disabled = true; btn.innerText = "⚡ Publicando..."; }
 
             try {
                 let urlPortada = "";
                 if (archivoPortadaGlobal) {
                     const namePort = `portada_${Date.now()}_${archivoPortadaGlobal.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-                    const { error: errP } = await client.storage.from('cuentos-imagenes').upload(namePort, archivoPortadaGlobal);
-                    if(errP) throw errP;
+                    await client.storage.from('cuentos-imagenes').upload(namePort, archivoPortadaGlobal);
                     urlPortada = client.storage.from('cuentos-imagenes').getPublicUrl(namePort).data.publicUrl;
                 }
 
                 let urlsCuerpo = [];
                 for (let file of archivosCuerpoGlobal) {
                     const nameCuerpo = `cuerpo_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
-                    const { error: errC } = await client.storage.from('cuentos-imagenes').upload(nameCuerpo, file);
-                    if(errC) throw errC;
-                    const urlC = client.storage.from('cuentos-imagenes').getPublicUrl(nameCuerpo).data.publicUrl;
-                    urlsCuerpo.push(urlC);
+                    await client.storage.from('cuentos-imagenes').upload(nameCuerpo, file);
+                    urlsCuerpo.push(client.storage.from('cuentos-imagenes').getPublicUrl(nameCuerpo).data.publicUrl);
                 }
 
-                const p1 = document.getElementById('p1')?.value.trim();
-                const p2 = document.getElementById('p2')?.value.trim();
-                const p3 = document.getElementById('p3')?.value.trim();
-                const p4 = document.getElementById('p4')?.value.trim();
-                const p5 = document.getElementById('p5')?.value.trim();
-                let preguntasArr = [];
-                if(p1) preguntasArr.push(p1);
-                if(p2) preguntasArr.push(p2);
-                if(p3) preguntasArr.push(p3);
-                if(p4) preguntasArr.push(p4);
-                if(p5) preguntasArr.push(p5);
-
                 const payload = {
-                    titulo: document.getElementById('titulo').value.trim(),
-                    fecha_publicacion: document.getElementById('fecha').value,
-                    contenido: document.getElementById('contenido').value.trim(),
-                    destinatario: document.getElementById('destinatario').value,
+                    titulo: document.getElementById('titulo')?.value.trim() || 'Sin Título',
+                    fecha_publicacion: document.getElementById('fecha')?.value || new Date().toISOString().split('T')[0],
+                    contenido: document.getElementById('contenido')?.value.trim() || '',
+                    destinatario: document.getElementById('destinatario')?.value || 'Ambos',
                     imagen_url: urlPortada,
                     imagenes_cuerpo: urlsCuerpo,
-                    preguntas: preguntasArr
+                    preguntas: recolectarPreguntasEstructuradas()
                 };
 
-                const { error: insertError } = await client.from('cuentos').insert([payload]);
-                if (insertError) throw insertError;
-
-                alert("🚀 ¡Cuento publicado perfectamente con todo su multimedia!");
+                await client.from('cuentos').insert([payload]);
+                alert("🚀 ¡Cuento publicado!");
                 cuentoForm.reset();
                 if (previewContainer) previewContainer.style.display = 'none';
                 if (previewCuerpoContainer) previewCuerpoContainer.innerHTML = '';
-                if (dropZone) dropZone.innerText = "📸 Arrastra, pega (Ctrl+V) o toca aquí para subir la Portada";
-                archivoPortadaGlobal = null;
-                archivosCuerpoGlobal = [];
-                if (fechaInput) fechaInput.value = hoy;
+                if (contenedorPreguntasDinamicas) contenedorPreguntasDinamicas.innerHTML = '';
+                archivoPortadaGlobal = null; archivosCuerpoGlobal = []; contadorPreguntas = 0;
+                if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+                agregarNuevaPregunta();
 
             } catch (error) {
-                alert("Error al guardar: " + error.message);
+                alert("Error: " + error.message);
             } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerText = "🚀 Publicar Cuento Mágico";
-                }
+                if (btn) { btn.disabled = false; btn.innerText = "🚀 Publicar Cuento Mágico"; }
             }
         });
     }
 
-    // --- CARGAR HISTORIAL Y RESPUESTAS ---
-    async function cargarHistorial() {
+    // --- LOGICA INTERNA DEL HISTORIAL ---
+    window.cargarHistorialGlobal = async function() {
         const contenedor = document.getElementById('historialContenedor');
         const client = obtenerClienteSupabase();
-        if (!client) {
-            if (contenedor) contenedor.innerHTML = `<p style="color:#64748b; text-align:center;">Esperando conexión con la base de datos...</p>`;
-            return;
-        }
+        if (!client || !contenedor) return;
+
         try {
             const { data: cuentos, error: errC } = await client.from('cuentos').select('*').order('fecha_publicacion', { ascending: false });
             if(errC) throw errC;
@@ -219,9 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
             renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
 
         } catch (err) {
-            if (contenedor) contenedor.innerHTML = `<p style="color:red;">Error de conexión: ${err.message}</p>`;
+            contenedor.innerHTML = `<p style="color:red; padding:10px;">Error: ${err.message}</p>`;
         }
-    }
+    };
 
     function llenarFiltrosDeTitulos(cuentos) {
         if (!selectTituloPapa) return;
@@ -235,18 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if(opcionesPrevia) selectTituloPapa.value = opcionesPrevia;
     }
-
-    // Escuchadores de Filtro Dinámicos y Seguros
-    [selectTituloPapa, filtrarDestinatario, filtrarFechaPapa].forEach(elem => {
-        if (elem) {
-            elem.addEventListener('change', async () => {
-                const client = obtenerClienteSupabase();
-                if (!client) return;
-                const { data: respuestas } = await client.from('respuestas_hijos').select('*');
-                renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
-            });
-        }
-    });
 
     function renderizarHistorialFiltrado(cuentos, respuestas) {
         const contenedor = document.getElementById('historialContenedor');
@@ -265,76 +313,87 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if(filtrados.length === 0) {
-            contenedor.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;">No se encontraron cuentos con esos filtros.</p>';
+            contenedor.innerHTML = '<p style="text-align:center;color:#64748b;padding:20px;">No hay cuentos con esos filtros.</p>';
             return;
         }
 
         filtrados.forEach(c => {
             const respuestasEsteCuento = respuestas.filter(r => r.cuento_id === c.id);
-            
             const tieneThommy = respuestasEsteCuento.some(r => r.lector === 'Thommy');
             const tieneAlma = respuestasEsteCuento.some(r => r.lector === 'Alma');
+            
             let checksHtml = "";
             if(c.destinatario === 'Ambos' || c.destinatario === 'Thommy') checksHtml += `<span>👦 Thommy: ${tieneThommy ? '✅ Respondió':'❌ Pendiente'}</span> `;
             if(c.destinatario === 'Ambos' || c.destinatario === 'Alma') checksHtml += `<span style="margin-left:10px;">👶 Alma: ${tieneAlma ? '✅ Respondió':'❌ Pendiente'}</span>`;
 
             let miniGaleriaCuerpoHtml = "";
             if (c.imagenes_cuerpo && c.imagenes_cuerpo.length > 0) {
-                miniGaleriaCuerpoHtml = `<div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto; padding-bottom:5px;">`;
+                miniGaleriaCuerpoHtml = `<div style="display:flex; gap:8px; margin-top:10px; overflow-x:auto;">`;
                 c.imagenes_cuerpo.forEach(urlImg => {
-                    miniGaleriaCuerpoHtml += `<img src="${urlImg}" onclick="abrirModal('${urlImg}')" style="width:55px; height:55px; object-fit:cover; border-radius:8px; cursor:pointer; border:1px solid #cbd5e1;">`;
+                    miniGaleriaCuerpoHtml += `<img src="${urlImg}" onclick="abrirModal('${urlImg}')" style="width:55px; height:55px; object-fit:cover; border-radius:8px; cursor:pointer;">`;
                 });
                 miniGaleriaCuerpoHtml += `</div>`;
             }
 
             let preguntasAgrupadasHtml = "";
             if(c.preguntas && c.preguntas.length > 0) {
-                c.preguntas.forEach((preg, idx) => {
+                for(let idx = 0; idx < c.preguntas.length; idx++) {
+                    const preguntaObj = c.preguntas[idx];
+                    if(!preguntaObj) continue;
+
+                    const esObjeto = typeof preguntaObj === 'object' && preguntaObj !== null;
+                    const textoDeLaPregunta = esObjeto ? preguntaObj.texto : preguntaObj;
+                    const tipoDeLaPregunta = esObjeto ? (preguntaObj.tipo || 'tradicional') : 'tradicional';
+
+                    let detallesOpciones = "";
+                    if(tipoDeLaPregunta === 'multiple' && preguntaObj.opciones) {
+                        detallesOpciones = `<span style="display:block; font-size:11px; color:#6366f1;">[Opciones: ${preguntaObj.opciones.join(' | ')}]</span>`;
+                    }
+
                     preguntasAgrupadasHtml += `<div style="margin-top:10px; background:#f8fafc; padding:10px; border-radius:10px; border-left:3px solid #6366f1;">
-                        <b style="font-size:13px; color:#1e293b;">P${idx+1}: ${preg}</b>`;
+                        <b style="font-size:13px;">P${idx+1}: ${textoDeLaPregunta}</b>
+                        ${detallesOpciones}`;
                     
                     const respuestasDeEstaP = respuestasEsteCuento.filter(r => r.pregunta_index === idx);
                     if(respuestasDeEstaP.length === 0) {
-                        preguntasAgrupadasHtml += `<p style="font-size:12px; color:#94a3b8; margin:4px 0 0 0;">Ninguno ha respondido aún.</p>`;
+                        preguntasAgrupadasHtml += `<p style="font-size:12px; color:#94a3b8; margin:4px 0 0 0;">Nadie respondió aún.</p>`;
                     } else {
                         respuestasDeEstaP.forEach(resp => {
                             let archivoHtml = "";
                             if(resp.respuesta_archivo_url) {
                                 if(resp.tipo_archivo === 'audio') {
-                                    archivoHtml = `<br><audio controls src="${resp.respuesta_archivo_url}" style="margin-top:5px; height:32px; max-width:100%;"></audio>`;
-                                } else if(resp.tipo_archivo === 'foto') {
-                                    archivoHtml = `<br><img src="${resp.respuesta_archivo_url}" onclick="abrirModal('${resp.respuesta_archivo_url}')" style="max-width:100px; max-height:100px; object-fit:cover; border-radius:8px; margin-top:5px; cursor:pointer; border:1px solid #e2e8f0;">`;
+                                    archivoHtml = `<br><audio controls src="${resp.respuesta_archivo_url}" style="height:32px; max-width:100%;"></audio>`;
+                                } else {
+                                    archivoHtml = `<br><img src="${resp.respuesta_archivo_url}" onclick="abrirModal('${resp.respuesta_archivo_url}')" style="max-width:100px; border-radius:8px;">`;
                                 }
                             }
-                            preguntasAgrupadasHtml += `<p style="font-size:12px; margin:4px 0 0 0; color:#334155;">
-                                <b>${resp.lector}:</b> ${resp.respuesta_texto || '<i>[Sin comentarios escritos]</i>'} ${archivoHtml}
+                            preguntasAgrupadasHtml += `<p style="font-size:12px; margin:4px 0 0 0;">
+                                <b>${resp.lector}:</b> ${resp.respuesta_texto || '<i>[Sin texto]</i>'} ${archivoHtml}
                             </p>`;
                         });
                     }
                     preguntasAgrupadasHtml += `</div>`;
-                });
-            } else {
-                preguntasAgrupadasHtml = `<p style="font-size:12px; color:#64748b;">Este cuento no tiene cuestionario configurado.</p>`;
+                }
             }
 
             const card = document.createElement('div');
             card.className = 'card';
+            card.style = "background: white; border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align:left;";
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleDetalleCuento('det-${c.id}')">
                     <div>
-                        <h4 style="margin:0 0 5px 0; font-size:16px; color:#1e293b;">${c.titulo}</h4>
-                        <small style="color:#64748b;">📅 ${c.fecha_publicacion} | 🎯 Destinatario: <b>${c.destinatario}</b></small>
-                        <div style="margin-top:6px; font-size:12px; color:#475569;">${checksHtml}</div>
+                        <h4 style="margin:0; font-size:16px; color:#1e293b;">${c.titulo}</h4>
+                        <small style="color:#64748b;">📅 ${c.fecha_publicacion} | 🎯 Destinatario: ${c.destinatario}</small>
+                        <div style="margin-top:6px; font-size:12px; color:#334155;">${checksHtml}</div>
                     </div>
-                    <span id="flecha-det-${c.id}" style="font-size:18px; transition:0.3s; color:#6366f1;">▼</span>
+                    <span id="flecha-det-${c.id}">▼</span>
                 </div>
                 <div id="det-${c.id}" style="display:none; margin-top:15px; border-top:1px dashed #e2e8f0; padding-top:15px;">
-                    ${c.imagen_url ? `<img src="${c.imagen_url}" onclick="abrirModal('${c.imagen_url}')" style="width:100%; max-height:140px; object-fit:cover; border-radius:12px; margin-bottom:10px; cursor:pointer;">` : ''}
-                    <div style="font-size:13px; color:#334155; max-height:150px; overflow-y:auto; white-space:pre-wrap; background:#f1f5f9; padding:10px; border-radius:12px;">
-                        <b>Cuerpo del Cuento:</b><br>${c.contenido}
+                    ${c.imagen_url ? `<img src="${c.imagen_url}" onclick="abrirModal('${c.imagen_url}')" style="width:100%; max-height:140px; object-fit:cover; border-radius:12px; margin-bottom:10px;">` : ''}
+                    <div style="font-size:13px; white-space:pre-wrap; background:#f1f5f9; padding:10px; border-radius:12px; color:#334155;">
+                        ${c.contenido}
                     </div>
                     ${miniGaleriaCuerpoHtml}
-                    <h5 style="margin:15px 0 5px 0; color:#4f46e5; font-size:13px; font-weight:bold;">📊 Respuestas y Actividades:</h5>
                     ${preguntasAgrupadasHtml}
                 </div>
             `;
@@ -342,73 +401,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.toggleDetalleCuento = function(id) {
-        const elemento = document.getElementById(id);
-        const flecha = document.getElementById(`flecha-${id}`);
-        if (elemento) {
-            if (elemento.style.display === "none" || elemento.style.display === "") {
-                elemento.style.display = "block";
-                if(flecha) flecha.style.transform = "rotate(180deg)";
-            } else {
-                elemento.style.display = "none";
-                if(flecha) flecha.style.transform = "rotate(0deg)";
-            }
+    // Escuchadores de los select de filtrado
+    [selectTituloPapa, filtrarDestinatario, filtrarFechaPapa].forEach(elem => {
+        if (elem) {
+            elem.addEventListener('change', async () => {
+                const client = obtenerClienteSupabase();
+                if (!client) return;
+                const { data: respuestas } = await client.from('respuestas_hijos').select('*');
+                renderizarHistorialFiltrado(todosLosCuentosGlobal, respuestas || []);
+            });
         }
-    };
+    });
 
-    window.abrirModal = function(url) {
-        const modal = document.getElementById('imageModal');
-        const target = document.getElementById('imgModalTarget');
-        if(modal && target) {
-            modal.style.display = "flex";
-            target.src = url;
-        }
-    };
-
-    const closeBtn = document.getElementById('closeModal');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            const modal = document.getElementById('imageModal');
-            if(modal) modal.style.display = "none";
-        });
-    }
-
-    // --- CONFIGURACIÓN DINÁMICA DE PERFILES ---
-    window.guardarConfigHijo = async () => {
-        const client = obtenerClienteSupabase();
-        if (!client) return;
-        const hijoSel = document.getElementById('hijoSelect');
-        const fotoInput = document.getElementById('fotoHijoInput');
-        const musicaInput = document.getElementById('musicaHijoInput');
-        
-        if(!hijoSel) return;
-        const nombre = hijoSel.value;
-        const foto = fotoInput ? fotoInput.files[0] : null;
-        const musica = musicaInput ? musicaInput.files[0] : null;
-
-        try {
-            let fUrl = null; let mUrl = null;
-            if(foto) {
-                const nameF = `avatar_${nombre}_${Date.now()}.png`;
-                await client.storage.from('perfiles').upload(nameF, foto, {upsert:true});
-                fUrl = client.storage.from('perfiles').getPublicUrl(nameF).data.publicUrl;
-            }
-            if(musica) {
-                const nameM = `musica_${nombre}_${Date.now()}.mp3`;
-                await client.storage.from('perfiles').upload(nameM, musica, {upsert:true});
-                mUrl = client.storage.from('perfiles').getPublicUrl(nameM).data.publicUrl;
-            }
-
-            const updatePayload = { nombre };
-            if (fUrl) updatePayload.foto_url = fUrl;
-            if (mUrl) updatePayload.musica_fondo_url = mUrl;
-
-            await client.from('perfiles_hijos').upsert(updatePayload, { onConflict: 'nombre' });
-            alert(`✅ ¡Perfil de ${nombre} guardado y actualizado con éxito!`);
-            if(fotoInput) fotoInput.value = '';
-            if(musicaInput) musicaInput.value = '';
-        } catch(e) { 
-            alert("Error al configurar perfil: " + e.message); 
-        }
-    };
+    // Carga inicial automatica de datos en background
+    setTimeout(() => {
+        window.cargarHistorialGlobal();
+    }, 200);
 });
